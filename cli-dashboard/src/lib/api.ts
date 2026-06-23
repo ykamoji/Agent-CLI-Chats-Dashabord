@@ -24,10 +24,14 @@ export type Chat = {
   [key: string]: unknown;
 };
 
-// User-defined session metadata. A flexible list mixing:
-//   { session_id: "display name" }          — per-session names (string value)
-//   { Green: [...ids], Blue: [...ids] }      — color labels grouping sessions
-export type SessionMap = Record<string, string | string[]>[];
+// User-defined session metadata. Each entry maps a session to its display name
+// and color label.
+export type SessionMapEntry = {
+  session_id: string;
+  label?: string;
+  name?: string;
+};
+export type SessionMap = SessionMapEntry[];
 
 export type ChatsResult = { chats: Chat[]; sessionMap: SessionMap };
 
@@ -35,6 +39,7 @@ export type SessionGroup = {
   sessionId: string;
   latestTs: string;
   count: number;
+  agent?: string;
 };
 
 export type ChatsSummaryResult = {
@@ -49,16 +54,11 @@ export type ChatsStatsResult = {
 };
 
 export type SessionLabel = "None" | "Green" | "Blue";
-const LABEL_COLORS: SessionLabel[] = ["Green", "Blue"];
 
 /** Look up a session's display name from the session_map, or "" if untagged. */
 export function sessionName(map: SessionMap | undefined, sessionId: string): string {
   if (!map) return "";
-  for (const entry of map) {
-    const v = entry[sessionId];
-    if (typeof v === "string") return v || "";
-  }
-  return "";
+  return map.find((e) => e.session_id === sessionId)?.name || "";
 }
 
 /** Look up a session's color label, or "None" if unlabeled. */
@@ -67,13 +67,8 @@ export function sessionLabel(
   sessionId: string
 ): SessionLabel {
   if (!map) return "None";
-  for (const entry of map) {
-    for (const color of LABEL_COLORS) {
-      const ids = entry[color];
-      if (Array.isArray(ids) && ids.includes(sessionId)) return color;
-    }
-  }
-  return "None";
+  const label = map.find((e) => e.session_id === sessionId)?.label;
+  return (label === "Green" || label === "Blue") ? label : "None";
 }
 
 // --- session storage (token + 5-minute TTL, per requirements) ----------------

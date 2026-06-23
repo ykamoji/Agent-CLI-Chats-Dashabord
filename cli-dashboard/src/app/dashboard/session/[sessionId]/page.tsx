@@ -107,6 +107,7 @@ function SessionContent() {
           onSessionMapChange={applySessionMap}
           turnsCount={chats.length}
           showTurns={!loading && !error}
+          agent={chats[0]?.cli_agent as string | undefined}
         />
 
         {/* Turns table (session column removed) */}

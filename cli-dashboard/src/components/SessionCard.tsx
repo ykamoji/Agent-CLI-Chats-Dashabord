@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { type SessionLabel } from "@/lib/api";
 import { fmtTime } from "@/lib/chats";
+import AgentBadge from "@/components/AgentBadge";
 
 // A virtual "session" grouping card — shows only the session id and the
 // latest timestamp. Clicking it opens that session's full turn table.
@@ -10,20 +11,22 @@ export default function SessionCard({
   href,
   name,
   label = "None",
+  agent,
 }: {
   sessionId: string;
   latestTimestamp: string;
   href: string;
   name?: string;
   label?: SessionLabel;
+  agent?: string;
 }) {
   const tagged = Boolean(name);
   const accent =
     label === "Green"
       ? "border-l-4 border-l-green-500"
       : label === "Blue"
-      ? "border-l-4 border-l-blue-500"
-      : "";
+        ? "border-l-4 border-l-blue-500"
+        : "";
   return (
     <Link
       href={href}
@@ -37,9 +40,8 @@ export default function SessionCard({
           {label !== "None" && (
             <span
               title={label}
-              className={`h-2.5 w-2.5 rounded-full ${
-                label === "Green" ? "bg-green-500" : "bg-blue-500"
-              }`}
+              className={`h-2.5 w-2.5 rounded-full ${label === "Green" ? "bg-green-500" : "bg-blue-500"
+                }`}
             />
           )}
           <span
@@ -70,20 +72,23 @@ export default function SessionCard({
           {sessionId || "—"}
         </p>
       )}
-      <div className="mt-4 flex items-center gap-1.5 text-xs text-ink-muted">
-        <svg
-          className="h-3.5 w-3.5"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="12" cy="12" r="9" />
-          <path d="M12 7v5l3 2" />
-        </svg>
-        <span title={latestTimestamp}>{fmtTime(latestTimestamp)}</span>
+      <div className="mt-auto pt-4 flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-xs text-ink-muted">
+          <svg
+            className="h-3.5 w-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+          <span title={latestTimestamp}>{fmtTime(latestTimestamp)}</span>
+        </div>
+        {agent && <AgentBadge agent={agent} />}
       </div>
     </Link>
   );

@@ -36,53 +36,50 @@ def logout():
     return jsonify({"message": "logged out"})
 
 
-def _apply_session_name(session_map, session_id: str, name: str):
-    """Return an updated session_map (list of {session_id: name}). Setting an
-    empty name removes the entry; otherwise it upserts in place."""
-    session_map = [e for e in (session_map or []) if isinstance(e, dict)]
-    if name:
-        for entry in session_map:
-            if session_id in entry:
-                entry[session_id] = name
-                return session_map
-        session_map.append({session_id: name})
-        return session_map
-    # Empty name -> clear any existing tag for this session.
-    return [e for e in session_map if session_id not in e]
-
-
 # Supported color labels for grouping sessions.
 LABEL_COLORS = ("Green", "Blue")
 
 
-def _labels_entry(session_map):
-    """Return the single {Green: [...], Blue: [...]} entry, if present."""
+def _find_entry(session_map, session_id: str):
+    """Return the entry dict for ``session_id``, or None."""
     for entry in session_map:
-        if isinstance(entry, dict) and any(
-            k in LABEL_COLORS and isinstance(entry.get(k), list) for k in entry
-        ):
+        if isinstance(entry, dict) and entry.get("session_id") == session_id:
             return entry
     return None
 
 
-def _apply_session_label(session_map, session_id: str, label: str):
-    """Return an updated session_map where ``session_id`` is grouped under the
-    given color label. ``None`` (or anything outside LABEL_COLORS) clears it."""
+def _apply_session_name(session_map, session_id: str, name: str):
+    """Upsert a session's display name. An empty name clears it but keeps the
+    entry if a label is still set; removes the entry entirely otherwise."""
     session_map = [e for e in (session_map or []) if isinstance(e, dict)]
+    entry = _find_entry(session_map, session_id)
+    if name:
+        if entry is not None:
+            entry["name"] = name
+        else:
+            session_map.append({"session_id": session_id, "name": name, "label": "None"})
+        return session_map
+    # Empty name — clear the name field; drop the entry if no label is set.
+    if entry is not None:
+        entry["name"] = ""
+        if entry.get("label", "None") == "None":
+            session_map = [e for e in session_map if e is not entry]
+    return session_map
 
-    entry = _labels_entry(session_map)
-    if entry is None:
-        entry = {c: [] for c in LABEL_COLORS}
-        session_map.append(entry)
 
-    # Normalize and remove this session from every color first (one label max).
-    for color in LABEL_COLORS:
-        existing = entry.get(color)
-        entry[color] = [s for s in existing if s != session_id] if isinstance(existing, list) else []
-
-    if label in LABEL_COLORS:
-        entry[label].append(session_id)
-
+def _apply_session_label(session_map, session_id: str, label: str):
+    """Upsert a session's color label."""
+    session_map = [e for e in (session_map or []) if isinstance(e, dict)]
+    label = label if label in LABEL_COLORS else "None"
+    entry = _find_entry(session_map, session_id)
+    if entry is not None:
+        entry["label"] = label
+        # Drop the entry entirely if both name and label are cleared.
+        if label == "None" and not entry.get("name"):
+            session_map = [e for e in session_map if e is not entry]
+    else:
+        if label != "None":
+            session_map.append({"session_id": session_id, "name": "", "label": label})
     return session_map
 
 
