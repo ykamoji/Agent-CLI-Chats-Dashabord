@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { type Chat } from "@/lib/api";
 import { fmtTime, toRow, type Row } from "@/lib/chats";
+import ExportPanel from "@/components/ExportPanel";
 
 type SortKey = "timestamp" | "input" | "output" | "tools" | "sessionId" | "agent";
 type SortDir = "asc" | "desc";
@@ -13,9 +14,8 @@ function AgentBadge({ agent }: { agent: string }) {
   const label = isClaude ? "Claude" : a.includes("anti") ? "Antigravity" : agent || "—";
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        isClaude ? "bg-ink text-paper" : "border border-ink/20 bg-white text-ink"
-      }`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${isClaude ? "bg-ink text-paper" : "border border-ink/20 bg-white text-ink"
+        }`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${isClaude ? "bg-paper" : "bg-ink"}`} />
       {label}
@@ -34,6 +34,7 @@ export default function ChatTable({
   selectedId = null,
   onRowClick,
   onDelete,
+  isDemo = false,
 }: {
   chats: Chat[];
   loading: boolean;
@@ -46,14 +47,18 @@ export default function ChatTable({
   // Called with the clicked row and its stable (timestamp-ascending) number.
   onRowClick?: (row: Row, rowNumber: number) => void;
   onDelete?: (selectedRawChats: Chat[]) => Promise<void>;
+  isDemo?: boolean;
 }) {
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
     key: "timestamp",
-    dir: "asc",
+    dir: "desc",
   });
   const [selectionEnabled, setSelectionEnabled] = useState(false);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+
+  // Export panel visibility (the panel owns its own config + download logic).
+  const [exportOpen, setExportOpen] = useState(false);
 
   const rows = useMemo(() => chats.map(toRow), [chats]);
 
@@ -102,6 +107,12 @@ export default function ChatTable({
     );
   }
 
+  // Rows the export panel should act on: the selection, or all when none.
+  const exportingSelected = selectionEnabled && selectedRowIds.size > 0;
+  const exportRows = exportingSelected
+    ? rows.filter((r) => selectedRowIds.has(r.id))
+    : rows;
+
   function SortHeader({ label, k }: { label: string; k: SortKey }) {
     const active = sort.key === k;
     return (
@@ -124,6 +135,7 @@ export default function ChatTable({
   const effectiveColSpan = selectionEnabled ? colSpan + 1 : colSpan;
 
   return (
+    <>
     <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-material">
       <div className="flex items-center justify-between border-b border-ink/10 px-5 py-4">
         <h2 className="font-display text-lg font-bold">{title}</h2>
@@ -163,6 +175,19 @@ export default function ChatTable({
             className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft disabled:cursor-not-allowed disabled:opacity-60"
           >
             {selectionEnabled ? "Cancel Selection" : "Select"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setExportOpen(true)}
+            disabled={loading || deleting || rows.length === 0}
+            className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 3v12" />
+              <path d="m7 10 5 5 5-5" />
+              <path d="M5 21h14" />
+            </svg>
+            Export
           </button>
           {onRefresh && (
             <button
@@ -249,15 +274,13 @@ export default function ChatTable({
                     key={r.id}
                     onClick={() => onRowClick?.(r, rowNumber.get(r.id) ?? 0)}
                     aria-selected={selected}
-                    className={`border-b border-ink/5 align-top transition-colors ${
-                      onRowClick ? "cursor-pointer" : ""
-                    } ${
-                      selected
+                    className={`border-b border-ink/5 align-top transition-colors ${onRowClick ? "cursor-pointer" : ""
+                      } ${selected
                         ? "bg-ink/5 ring-1 ring-inset ring-ink/20"
                         : isChecked
-                        ? "bg-ink/5"
-                        : "hover:bg-paper-soft"
-                    }`}
+                          ? "bg-ink/5"
+                          : "hover:bg-paper-soft"
+                      }`}
                   >
                     {selectionEnabled && (
                       <td className="px-5 py-4 w-10" onClick={(e) => e.stopPropagation()}>
@@ -327,5 +350,16 @@ export default function ChatTable({
         </table>
       </div>
     </div>
+
+    {/* Export config slide-over */}
+    <ExportPanel
+      open={exportOpen}
+      onClose={() => setExportOpen(false)}
+      rows={exportRows}
+      rowNumber={rowNumber}
+      exportingSelected={exportingSelected}
+      isDemo={isDemo}
+    />
+    </>
   );
 }

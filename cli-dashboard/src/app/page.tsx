@@ -1,4 +1,6 @@
 import Link from "next/link";
+import LandingNav from "@/components/LandingNav";
+import LandingHeroActions from "@/components/LandingHeroActions";
 
 export default function LandingPage() {
   return (
@@ -15,20 +17,7 @@ export default function LandingPage() {
             CLI Dashboard
           </span>
         </Link>
-        <nav className="flex items-center gap-2">
-          <Link
-            href="/auth"
-            className="rounded-full px-4 py-2 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/auth?mode=signup"
-            className="rounded-full bg-ink px-4 py-2 text-sm font-medium text-paper shadow-material transition-transform hover:-translate-y-0.5"
-          >
-            Get started
-          </Link>
-        </nav>
+        <LandingNav />
       </header>
 
       {/* Hero */}
@@ -53,26 +42,7 @@ export default function LandingPage() {
           </span>
         </p>
 
-        <div className="mt-10 flex animate-fade-up flex-col items-center gap-3 sm:flex-row">
-          <Link
-            href="/auth?mode=signup"
-            className="rounded-full bg-ink px-8 py-3.5 text-sm font-semibold text-paper shadow-material-lg transition-transform hover:-translate-y-0.5"
-          >
-            Open the dashboard →
-          </Link>
-          <Link
-            href="/auth"
-            className="rounded-full border border-ink/15 bg-white px-8 py-3.5 text-sm font-semibold text-ink transition-colors hover:bg-paper-soft"
-          >
-            I already have an account
-          </Link>
-          <Link
-            href="/dashboard?demo=google_hackathon"
-            className="rounded-full border border-ink/15 bg-white px-8 py-3.5 text-sm font-semibold text-ink transition-colors hover:bg-paper-soft"
-          >
-            Sample Dashboard ✦
-          </Link>
-        </div>
+        <LandingHeroActions />
 
         {/* Feature triplet */}
         <div className="mt-24 grid w-full animate-fade-up gap-px overflow-hidden rounded-2xl border border-ink/10 bg-ink/10 shadow-material sm:grid-cols-3">
