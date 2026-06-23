@@ -36,6 +36,10 @@ def sessions_collection():
     return get_db()[config.SESSIONS_COLLECTION]
 
 
+def insights_collection():
+    return get_db()[config.INSIGHTS_COLLECTION]
+
+
 def ping() -> None:
     """Raise if MongoDB is unreachable; succeed silently otherwise."""
     get_client().admin.command("ping")
@@ -47,3 +51,8 @@ def init_indexes() -> None:
     sessions.create_index("token", unique=True)
     # expireAfterSeconds=0 -> document is removed once `expires_at` is in the past.
     sessions.create_index("expires_at", expireAfterSeconds=0)
+
+    # Latest-insight lookups per user/scope/session.
+    insights_collection().create_index(
+        [("user_id", 1), ("scope", 1), ("session_id", 1), ("timestamp", -1)]
+    )
