@@ -1,65 +1,41 @@
 "use client";
 
 import { useState } from "react";
-import { getTurnTools } from "@/lib/api";
-import { type Row, type ToolUse } from "@/lib/chats";
+import { type Row } from "@/lib/chats";
+import {
+  useExport,
+  type ExportFormat,
+  type SortDir,
+  type ExportCol,
+} from "@/lib/useExport";
 
-type ExportFormat = "csv" | "json";
-type SortDir = "asc" | "desc";
-type ToolField = "count" | "name" | "argument" | "result";
-type ExportCol = {
-  key: string;
-  label: string;
-  get: (r: Row, num: number) => string | number;
-};
-
-// Scalar columns (one value per row). Tool data is handled separately below
-// because a turn can have many tools, each with name/arguments/result.
+// Scalar columns (one value per row). Tool data uses the "tool:" key prefix
+// below so that all selection state lives in a single `cols` Set.
 const EXPORT_COLUMNS: ExportCol[] = [
-  { key: "number", label: "#", get: (_r, n) => n },
-  { key: "timestamp", label: "Timestamp", get: (r) => r.timestamp },
-  { key: "input", label: "Input", get: (r) => r.input },
-  { key: "output", label: "Output", get: (r) => r.output },
-  { key: "sessionId", label: "Session ID", get: (r) => r.sessionId },
-  { key: "agent", label: "Agent", get: (r) => r.agent },
+  { key: "number",     label: "#",           get: (_r, n) => n },
+  { key: "timestamp",  label: "Timestamp",   get: (r) => r.timestamp },
+  { key: "input",      label: "Input",       get: (r) => r.input },
+  { key: "output",     label: "Output",      get: (r) => r.output },
+  { key: "sessionId",  label: "Session ID",  get: (r) => r.sessionId },
+  { key: "agent",      label: "Agent",       get: (r) => r.agent },
   { key: "entryIndex", label: "Entry index", get: (r) => r.entryIndex },
 ];
-const DEFAULT_EXPORT_COLS = ["timestamp", "input", "output", "agent"];
 
-const TOOL_FIELDS: { key: ToolField; label: string }[] = [
-  { key: "count", label: "Count" },
-  { key: "name", label: "Tool name" },
-  { key: "argument", label: "Argument" },
-  { key: "result", label: "Result" },
+// Tool sub-fields. Keys are prefixed with "tool:" to avoid clashing with
+// scalar column keys while sharing the same Set.
+const TOOL_FIELDS: { key: string; label: string }[] = [
+  { key: "tool:count",    label: "Count"     },
+  { key: "tool:name",     label: "Tool name" },
+  { key: "tool:argument", label: "Argument"  },
+  { key: "tool:result",   label: "Result"    },
 ];
 
-function csvEscape(v: string | number): string {
-  const s = v == null ? "" : String(v);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
+const DEFAULT_COLS = new Set(["timestamp", "input", "output", "agent", "tool:count"]);
 
-function argToStr(a: unknown): string {
-  if (a == null) return "";
-  if (typeof a === "string") return a;
-  try {
-    return JSON.stringify(a);
-  } catch {
-    return String(a);
-  }
-}
+const TOOL_KEYS = new Set(TOOL_FIELDS.map((f) => f.key));
 
-function downloadFile(filename: string, content: string, mime: string): void {
-  const url = URL.createObjectURL(new Blob([content], { type: mime }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-// Slide-over panel for exporting rows. Owns its own column/format/order state
-// and the file-building + download logic. The parent supplies the rows to
-// export (already filtered to the selection, or all) and controls visibility.
+// Slide-over panel for exporting rows. Owns column/format/order selection;
+// delegates file-building and download to the useExport hook.
 export default function ExportPanel({
   open,
   onClose,
@@ -76,20 +52,17 @@ export default function ExportPanel({
   isDemo?: boolean;
 }) {
   const [format, setFormat] = useState<ExportFormat>("csv");
-  const [order, setOrder] = useState<SortDir>("desc");
-  const [cols, setCols] = useState<Set<string>>(() => new Set(DEFAULT_EXPORT_COLS));
-  const [toolsEnabled, setToolsEnabled] = useState(true);
-  const [toolFields, setToolFields] = useState<Set<ToolField>>(
-    () => new Set<ToolField>(["count"])
-  );
-  const [exporting, setExporting] = useState(false);
+  const [order, setOrder]   = useState<SortDir>("desc");
+  // Single Set for all column selections – scalar cols by key, tool fields by "tool:*".
+  const [cols, setCols] = useState<Set<string>>(() => new Set(DEFAULT_COLS));
 
-  const count = rows.length;
-  // name/argument/result require the full Tools Used array (not in the payload).
+  const count        = rows.length;
+  const toolsEnabled = [...cols].some((k) => TOOL_KEYS.has(k));
+  const selectedCols = EXPORT_COLUMNS.filter((c) => cols.has(c.key));
+  const hasSelection = selectedCols.length > 0 || toolsEnabled;
+
   const needsToolDetail =
-    toolsEnabled &&
-    (toolFields.has("name") || toolFields.has("argument") || toolFields.has("result"));
-  const hasSelection = cols.size > 0 || (toolsEnabled && toolFields.size > 0);
+    cols.has("tool:name") || cols.has("tool:argument") || cols.has("tool:result");
 
   function toggleCol(key: string) {
     setCols((prev) => {
@@ -100,99 +73,28 @@ export default function ExportPanel({
     });
   }
 
-  function toggleToolField(key: ToolField) {
-    setToolFields((prev) => {
+  /** Toggle all tool sub-fields on/off as a group. */
+  function toggleTools() {
+    setCols((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      if (toolsEnabled) {
+        TOOL_KEYS.forEach((k) => next.delete(k));
+      } else {
+        next.add("tool:count"); // restore sensible default
+      }
       return next;
     });
   }
 
-  async function handleExport() {
-    const selectedCols = EXPORT_COLUMNS.filter((c) => cols.has(c.key));
-    if (!hasSelection || count === 0) return;
-
-    const ordered = [...rows].sort((a, b) => {
-      const d = (Date.parse(a.timestamp) || 0) - (Date.parse(b.timestamp) || 0);
-      return order === "asc" ? d : -d;
-    });
-
-    // Fetch full tool data only when name/argument/result are requested.
-    const toolsById = new Map<string, ToolUse[]>();
-    if (needsToolDetail) {
-      setExporting(true);
-      try {
-        const fetched = await Promise.all(
-          ordered.map((r) =>
-            getTurnTools(r.sessionId, r.entryIndex, isDemo).catch(() => [])
-          )
-        );
-        ordered.forEach((r, i) => toolsById.set(r.id, (fetched[i] as ToolUse[]) ?? []));
-      } finally {
-        setExporting(false);
-      }
-    }
-
-    const cell = (r: Row, c: ExportCol) => c.get(r, rowNumber.get(r.id) ?? 0);
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const now = new Date();
-    const filename = "chats_export_" +
-      [
-        now.toLocaleDateString("sv-SE", { timeZone: timezone }), // 2026-06-23
-        now.toLocaleTimeString("sv-SE", {
-          timeZone: timezone,
-          hour12: false,
-        }).replace(/:/g, "-"),
-      ].join("_")
-
-    if (format === "json") {
-      const data = ordered.map((r) => {
-        const o: Record<string, unknown> = {};
-        selectedCols.forEach((c) => (o[c.key] = cell(r, c)));
-        if (toolsEnabled) {
-          if (toolFields.has("count")) o.toolCount = r.toolCount;
-          if (needsToolDetail) {
-            o.tools = (toolsById.get(r.id) ?? []).map((t) => {
-              const x: Record<string, unknown> = {};
-              if (toolFields.has("name")) x.tool = t.tool;
-              if (toolFields.has("argument")) x.arguments = t.arguments;
-              if (toolFields.has("result")) x.result = t.result;
-              return x;
-            });
-          }
-        }
-        return o;
-      });
-      downloadFile(`${filename}.json`, JSON.stringify(data, null, 2), "application/json");
-    } else {
-      const headers = selectedCols.map((c) => c.label);
-      if (toolsEnabled) {
-        if (toolFields.has("count")) headers.push("Tool count");
-        if (toolFields.has("name")) headers.push("Tool names");
-        if (toolFields.has("argument")) headers.push("Tool arguments");
-        if (toolFields.has("result")) headers.push("Tool results");
-      }
-      const lines = ordered.map((r) => {
-        const vals: (string | number)[] = selectedCols.map((c) => cell(r, c));
-        if (toolsEnabled) {
-          const tools = toolsById.get(r.id) ?? [];
-          if (toolFields.has("count")) vals.push(r.toolCount);
-          if (toolFields.has("name")) vals.push(tools.map((t) => t.tool ?? "").join(" | "));
-          if (toolFields.has("argument"))
-            vals.push(tools.map((t) => argToStr(t.arguments)).join(" | "));
-          if (toolFields.has("result"))
-            vals.push(tools.map((t) => t.result ?? "").join(" | "));
-        }
-        return vals.map(csvEscape).join(",");
-      });
-      downloadFile(
-        `${filename}.csv`,
-        [headers.map(csvEscape).join(","), ...lines].join("\n"),
-        "text/csv"
-      );
-    }
-  }
+  const { exporting, handleExport } = useExport({
+    rows,
+    rowNumber,
+    cols,
+    selectedCols,
+    format,
+    order,
+    isDemo,
+  });
 
   return (
     <>
@@ -205,8 +107,9 @@ export default function ExportPanel({
       )}
       <aside
         aria-hidden={!open}
-        className={`fixed right-0 top-0 z-50 flex h-screen w-full max-w-md flex-col border-l border-ink/15 bg-paper shadow-material transition-transform duration-300 ease-out ${open ? "translate-x-0" : "translate-x-full"
-          }`}
+        className={`fixed right-0 top-0 z-50 flex h-screen w-full max-w-md flex-col border-l border-ink/15 bg-paper shadow-material transition-transform duration-300 ease-out ${
+          open ? "translate-x-0" : "translate-x-full"
+        }`}
       >
         <div className="flex items-center justify-between border-b border-ink/10 bg-white px-5 py-4">
           <div>
@@ -250,12 +153,12 @@ export default function ExportPanel({
               </label>
             ))}
 
-            {/* Tools (expands into sub-options when checked) */}
+            {/* Tools — parent toggle + sub-field checkboxes */}
             <label className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-paper-soft">
               <input
                 type="checkbox"
                 checked={toolsEnabled}
-                onChange={() => setToolsEnabled((v) => !v)}
+                onChange={toggleTools}
                 className="rounded border-ink/30 text-ink focus:ring-ink"
               />
               Tools
@@ -269,8 +172,8 @@ export default function ExportPanel({
                   >
                     <input
                       type="checkbox"
-                      checked={toolFields.has(f.key)}
-                      onChange={() => toggleToolField(f.key)}
+                      checked={cols.has(f.key)}
+                      onChange={() => toggleCol(f.key)}
                       className="rounded border-ink/30 text-ink focus:ring-ink"
                     />
                     {f.label}
@@ -289,18 +192,19 @@ export default function ExportPanel({
           <p className="mt-6 text-[10px] font-medium uppercase tracking-wide text-ink-muted">
             Format
           </p>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            {(["csv", "json"] as ExportFormat[]).map((f) => (
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {(["csv", "json", "markdown"] as ExportFormat[]).map((f) => (
               <button
                 key={f}
                 type="button"
                 onClick={() => setFormat(f)}
-                className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${format === f
-                  ? "border-ink bg-ink text-paper"
-                  : "border-ink/15 bg-white text-ink hover:bg-paper-soft"
-                  }`}
+                className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                  format === f
+                    ? "border-ink bg-ink text-paper"
+                    : "border-ink/15 bg-white text-ink hover:bg-paper-soft"
+                }`}
               >
-                .{f}
+                .{f === "markdown" ? "md" : f}
               </button>
             ))}
           </div>
@@ -313,17 +217,18 @@ export default function ExportPanel({
             {(
               [
                 { v: "desc" as SortDir, label: "Newest first" },
-                { v: "asc" as SortDir, label: "Oldest first" },
+                { v: "asc"  as SortDir, label: "Oldest first" },
               ]
             ).map((o) => (
               <button
                 key={o.v}
                 type="button"
                 onClick={() => setOrder(o.v)}
-                className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${order === o.v
-                  ? "border-ink bg-ink text-paper"
-                  : "border-ink/15 bg-white text-ink hover:bg-paper-soft"
-                  }`}
+                className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                  order === o.v
+                    ? "border-ink bg-ink text-paper"
+                    : "border-ink/15 bg-white text-ink hover:bg-paper-soft"
+                }`}
               >
                 {o.label}
               </button>
@@ -352,7 +257,7 @@ export default function ExportPanel({
             )}
             {exporting
               ? "Exporting…"
-              : `Export ${count} row${count !== 1 ? "s" : ""} as .${format}`}
+              : `Export ${count} row${count !== 1 ? "s" : ""} as .${format === "markdown" ? "md" : format}`}
           </button>
         </div>
       </aside>
