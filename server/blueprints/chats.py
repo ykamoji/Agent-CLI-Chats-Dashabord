@@ -126,6 +126,7 @@ def get_chats_summary():
         projection = {
             "_id": 0,
             "session_id": 1,
+            "cli_agent": 1,
             "completed At": 1,
             "completedAt": 1,
             "timestamp": 1
@@ -139,7 +140,12 @@ def get_chats_summary():
             ts = doc.get("completed At") or doc.get("completedAt") or doc.get("timestamp") or ""
 
             if sid not in session_groups:
-                session_groups[sid] = {"sessionId": sid, "latestTs": ts, "count": 1}
+                session_groups[sid] = {
+                    "sessionId": sid,
+                    "latestTs": ts,
+                    "count": 1,
+                    "agent": doc.get("cli_agent") or "",
+                }
             else:
                 session_groups[sid]["count"] += 1
                 if ts > session_groups[sid]["latestTs"]:

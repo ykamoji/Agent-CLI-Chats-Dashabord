@@ -3,25 +3,13 @@
 import { useMemo, useState } from "react";
 import { type Chat } from "@/lib/api";
 import { fmtTime, toRow, type Row } from "@/lib/chats";
+import AgentBadge from "@/components/AgentBadge";
 import ExportPanel from "@/components/ExportPanel";
 
 type SortKey = "timestamp" | "input" | "output" | "tools" | "sessionId" | "agent";
 type SortDir = "asc" | "desc";
 
-function AgentBadge({ agent }: { agent: string }) {
-  const a = agent.toLowerCase();
-  const isClaude = a.includes("claude");
-  const label = isClaude ? "Claude" : a.includes("anti") ? "Antigravity" : agent || "—";
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${isClaude ? "bg-ink text-paper" : "border border-ink/20 bg-white text-ink"
-        }`}
-    >
-      <span className={`h-1.5 w-1.5 rounded-full ${isClaude ? "bg-paper" : "bg-ink"}`} />
-      {label}
-    </span>
-  );
-}
+
 
 export default function ChatTable({
   chats,
@@ -131,7 +119,7 @@ export default function ChatTable({
     );
   }
 
-  const colSpan = hideSession ? 6 : 7;
+  const colSpan = (hideSession ? 5 : 7);
   const effectiveColSpan = selectionEnabled ? colSpan + 1 : colSpan;
 
   return (
@@ -239,7 +227,7 @@ export default function ChatTable({
               <SortHeader label="Output" k="output" />
               <SortHeader label="Tools Used" k="tools" />
               {!hideSession && <SortHeader label="Session" k="sessionId" />}
-              <SortHeader label="Agent" k="agent" />
+              {!hideSession && <SortHeader label="Agent" k="agent" />}
             </tr>
           </thead>
           <tbody>
@@ -340,9 +328,11 @@ export default function ChatTable({
                         </span>
                       </td>
                     )}
-                    <td className="px-5 py-4">
-                      <AgentBadge agent={r.agent} />
-                    </td>
+                    {!hideSession && (
+                      <td className="px-5 py-4">
+                        <AgentBadge agent={r.agent} />
+                      </td>
+                    )}
                   </tr>
                 );
               })}

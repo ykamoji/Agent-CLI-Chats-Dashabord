@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import AgentBadge from "@/components/AgentBadge";
 import LabelSelect from "@/components/LabelSelect";
 import {
   sessionLabel,
@@ -21,6 +22,7 @@ export default function SessionHeader({
   onSessionMapChange,
   turnsCount,
   showTurns,
+  agent,
 }: {
   sessionId: string;
   isDemo: boolean;
@@ -28,6 +30,7 @@ export default function SessionHeader({
   onSessionMapChange: (map: SessionMap) => void;
   turnsCount: number;
   showTurns: boolean;
+  agent?: string;
 }) {
   const currentName = sessionName(sessionMap, sessionId);
   const currentLabel = sessionLabel(sessionMap, sessionId);
@@ -86,7 +89,11 @@ export default function SessionHeader({
         </p>
         {savingName && <span className="text-[10px] text-ink-muted">Saving…</span>}
       </div>
-
+      <div className="mt-3 flex-1 gap-2">
+        <div className="flex justify-start">
+          {agent && <AgentBadge agent={agent} />}
+        </div>
+      </div>
       {editing ? (
         <input
           autoFocus
@@ -151,9 +158,11 @@ export default function SessionHeader({
       </div>
 
       {showTurns && (
-        <p className="mt-2 text-xs text-ink-muted">
-          {turnsCount} turn{turnsCount !== 1 ? "s" : ""}
-        </p>
+        <div className="mt-2 flex items-center gap-3">
+          <p className="text-xs text-ink-muted">
+            {turnsCount} turn{turnsCount !== 1 ? "s" : ""}
+          </p>
+        </div>
       )}
     </div>
   );

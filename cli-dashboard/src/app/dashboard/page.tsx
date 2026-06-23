@@ -268,6 +268,7 @@ function DashboardContent() {
                         href={sessionHref(s.sessionId)}
                         name={sessionName(sessionMap, s.sessionId)}
                         label={sessionLabel(sessionMap, s.sessionId)}
+                        agent={s.agent}
                       />
                     ))}
                   </div>
