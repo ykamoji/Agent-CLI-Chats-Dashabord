@@ -55,12 +55,78 @@ export function fmtTime(ts: string): string {
   });
 }
 
+// Best-effort un-escaping of a JSON-string fragment that can't be parsed
+// (commonly because the value was truncated upstream). Turns \" \\ \n \t etc.
+// into their real characters so the content is at least readable.
+function softUnescape(s: string): string {
+  let out = "";
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (ch === "\\" && i + 1 < s.length) {
+      const next = s[i + 1];
+      if (next === "n") { out += "\n"; i++; continue; }
+      if (next === "t") { out += "\t"; i++; continue; }
+      if (next === "r") { i++; continue; }
+      if (next === '"' || next === "\\" || next === "/") { out += next; i++; continue; }
+    }
+    out += ch;
+  }
+  return out;
+}
+
+// Tool arguments often arrive double-encoded: an object whose values are
+// themselves JSON strings (e.g. "Description": "\"...\"" or a stringified
+// array). Recursively parse any string that looks like JSON so the value is
+// unwrapped; if it won't parse (e.g. truncated), fall back to a soft unescape.
+function deepUnescape(value: unknown): unknown {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!/^["[{]/.test(trimmed)) return value; // not JSON-ish — leave as-is
+    try {
+      return deepUnescape(JSON.parse(trimmed));
+    } catch {
+      return softUnescape(value);
+    }
+  }
+  if (Array.isArray(value)) return value.map(deepUnescape);
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) out[k] = deepUnescape(v);
+    return out;
+  }
+  return value;
+}
+
+// Render the (already-unescaped) value without re-escaping string content, so
+// real quotes and newlines display as-is. Multi-line strings keep their breaks,
+// with continuation lines indented to align under their key.
+function pretty(value: unknown, indent = ""): string {
+  const pad = indent + "  ";
+  if (value === null) return "null";
+  if (typeof value === "string") {
+    if (!value.includes("\n")) return value;
+    return value
+      .split("\n")
+      .map((line, i) => (i === 0 ? line : pad + line))
+      .join("\n");
+  }
+  if (typeof value !== "object") return String(value);
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "[]";
+    return "[\n" + value.map((v) => pad + pretty(v, pad)).join(",\n") + "\n" + indent + "]";
+  }
+  const entries = Object.entries(value as Record<string, unknown>);
+  if (entries.length === 0) return "{}";
+  return (
+    "{\n" +
+    entries.map(([k, v]) => `${pad}${k}: ${pretty(v, pad)}`).join(",\n") +
+    "\n" +
+    indent +
+    "}"
+  );
+}
+
 export function fmtArgs(value: unknown): string {
   if (value == null) return "";
-  if (typeof value === "string") return value;
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return String(value);
-  }
+  return pretty(deepUnescape(value));
 }

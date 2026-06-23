@@ -89,7 +89,7 @@ const USER_KEY = "cli-dashboard:user";
 const CHATS_CACHE_PREFIX = "cli-dashboard:chats:";
 const SUMMARY_CACHE_PREFIX = "cli-dashboard:summary:";
 const STATS_CACHE_PREFIX = "cli-dashboard:stats:";
-const CHATS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const CHATS_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 type CachedChats = { data: Chat[]; sessionMap: SessionMap; cachedAt: number };
 
@@ -361,7 +361,7 @@ function writeSummaryCache(scope: string, data: ChatsSummaryResult): void {
   if (typeof window === "undefined") return;
   try {
     sessionStorage.setItem(SUMMARY_CACHE_PREFIX + scope, JSON.stringify({ data, cachedAt: Date.now() }));
-  } catch {}
+  } catch { }
 }
 
 export async function getChatsSummary(options?: {
@@ -428,7 +428,7 @@ function writeStatsCache(scope: string, data: ChatsStatsResult): void {
   if (typeof window === "undefined") return;
   try {
     sessionStorage.setItem(STATS_CACHE_PREFIX + scope, JSON.stringify({ data, cachedAt: Date.now() }));
-  } catch {}
+  } catch { }
 }
 
 export async function getChatsStats(options?: {
@@ -531,6 +531,93 @@ export function updateSessionLabel(
   demo = false
 ): Promise<SessionMap> {
   return postSessionUpdate({ session_id: sessionId, label }, demo);
+}
+
+// --- insights ----------------------------------------------------------------
+
+export type InsightsMetrics = {
+  total_turns: number;
+  total_sessions?: number;
+  tool_calls?: number;
+  distinct_tools?: number;
+  top_tools?: { tool: string; count: number }[];
+  empty_output_rate?: number;
+  tool_error_rate?: number;
+  retry_clusters?: number;
+  prompt_specificity_rate?: number;
+  vague_prompt_rate?: number;
+  avg_prompt_words?: number;
+  avg_tools_per_turn?: number;
+  agent_breakdown?: Record<string, number>;
+  session_shape?: {
+    turns: number;
+    duration_seconds: number | null;
+    tools_per_turn: number;
+    error_turns: number;
+  };
+  anomalies?: string[];
+};
+
+export type InsightsDoc = {
+  scope: "global" | "session";
+  session_id: string | null;
+  status: "pending" | "complete" | "error";
+  timestamp: string;
+  logs_used_count: number;
+  insights: string[];
+  recommendations: string[];
+  anomalies: string[];
+  reasoning: string;
+  model: string;
+  error: string | null;
+};
+
+export type InsightsResponse = {
+  docs: InsightsDoc[];
+  metrics: InsightsMetrics;
+  modelAvailable: boolean;
+};
+
+/** GET /api/insights — all stored insight rows (desc) + fresh deterministic metrics. */
+export async function getInsights(opts: {
+  scope: "global" | "session";
+  sessionId?: string;
+  demo?: boolean;
+}): Promise<InsightsResponse> {
+  const { scope, sessionId, demo = false } = opts;
+  const params = new URLSearchParams();
+  params.set("scope", scope);
+  if (scope === "session" && sessionId) params.set("session_id", sessionId);
+  if (demo) {
+    params.set("demo", "true");
+  } else {
+    const uid = getStoredUser()?.user_id;
+    if (uid) params.set("user_id", uid);
+  }
+  return request<InsightsResponse>(
+    `/api/insights?${params.toString()}`,
+    { method: "GET" },
+    !demo
+  );
+}
+
+/** POST /api/insights — kick off (async) Gemini generation. Auth only. */
+export async function generateInsights(opts: {
+  scope: "global" | "session";
+  sessionId?: string;
+  force?: boolean;
+}): Promise<{ status: string }> {
+  const { scope, sessionId, force } = opts;
+  const uid = getStoredUser()?.user_id;
+  const qs = uid ? `?user_id=${encodeURIComponent(uid)}` : "";
+  return request<{ status: string }>(
+    `/api/insights${qs}`,
+    {
+      method: "POST",
+      body: JSON.stringify({ scope, session_id: sessionId, force }),
+    },
+    true
+  );
 }
 
 /** GET /api/profile — the authenticated user's details. */
