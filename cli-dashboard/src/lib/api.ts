@@ -30,6 +30,7 @@ export type SessionMapEntry = {
   session_id: string;
   label?: string;
   name?: string;
+  group?: { name: string };
 };
 export type SessionMap = SessionMapEntry[];
 
@@ -45,6 +46,7 @@ export type SessionGroup = {
 export type ChatsSummaryResult = {
   sessions: SessionGroup[];
   sessionMap: SessionMap;
+  groups?: { name: string; session_list: string[] }[];
 };
 
 export type ChatsStatsResult = {
@@ -385,6 +387,7 @@ export async function getChatsSummary(options?: {
   const data = await request<{
     sessions: SessionGroup[];
     session_map?: SessionMap;
+    groups?: { name: string; session_list: string[] }[];
   }>(
     `/api/chats/summary${qs}`,
     { method: "GET" },
@@ -394,6 +397,7 @@ export async function getChatsSummary(options?: {
   const result: ChatsSummaryResult = {
     sessions: data.sessions ?? [],
     sessionMap: data.session_map ?? [],
+    groups: data.groups ?? [],
   };
   writeSummaryCache(scope, result);
   return result;
@@ -526,6 +530,15 @@ export function updateSessionLabel(
   demo = false
 ): Promise<SessionMap> {
   return postSessionUpdate({ session_id: sessionId, label }, demo);
+}
+
+/** Assign a group name to a list of session ids. */
+export function updateSessionGroup(
+  sessionIds: string[],
+  groupName: string,
+  demo = false
+): Promise<SessionMap> {
+  return postSessionUpdate({ session_ids: sessionIds, group: groupName }, demo);
 }
 
 // --- insights ----------------------------------------------------------------

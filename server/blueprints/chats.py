@@ -158,7 +158,16 @@ def get_chats_summary():
         }
         cache.set(cache_key, result, timeout=config.CHATS_CACHE_TTL)
 
-    return jsonify({**result, "session_map": _session_map(user_id)})
+    session_map = _session_map(user_id)
+    groups_dict = {}
+    for entry in session_map:
+        if isinstance(entry, dict) and entry.get("group") and entry["group"].get("name"):
+            gname = entry["group"]["name"]
+            groups_dict.setdefault(gname, []).append(entry.get("session_id"))
+            
+    groups_list = [{"name": k, "session_list": v} for k, v in groups_dict.items()]
+
+    return jsonify({**result, "session_map": session_map, "groups": groups_list})
 
 
 @bp.get("/api/chats/stats")

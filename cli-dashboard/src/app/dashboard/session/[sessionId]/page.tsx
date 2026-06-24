@@ -22,9 +22,6 @@ function SessionContent() {
 
   const demoUser = searchParams.get("demo");
   const isDemo = Boolean(demoUser);
-  const backHref = isDemo
-    ? `/dashboard?demo=${encodeURIComponent(demoUser as string)}`
-    : "/dashboard";
   const insightsHref = `/dashboard/session/${encodeURIComponent(sessionId)}/insights${
     isDemo ? `?demo=${encodeURIComponent(demoUser as string)}` : ""
   }`;
@@ -42,19 +39,49 @@ function SessionContent() {
 
   const panel = useDetailPanel();
 
+  const groupName = sessionMap.find((e) => e.session_id === sessionId)?.group?.name;
+  const sName = sessionMap.find((e) => e.session_id === sessionId)?.name || sessionId;
+  
+  const dashboardHref = `/dashboard${isDemo ? `?demo=${encodeURIComponent(demoUser as string)}` : ""}`;
+  const groupHref = groupName
+    ? `/dashboard/group/${encodeURIComponent(groupName)}${
+        isDemo ? `?demo=${encodeURIComponent(demoUser as string)}` : ""
+      }`
+    : undefined;
+
+  const backHref = groupName
+    ? groupHref!
+    : dashboardHref;
+
   return (
     <main className="min-h-screen overflow-x-hidden bg-paper text-ink">
       {/* Top bar */}
       <header className="sticky top-0 z-20 border-b border-ink/10 bg-paper/80 backdrop-blur">
         <div className="mx-auto flex items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-md bg-ink font-mono text-sm font-bold text-paper">
-              &gt;_
-            </span>
-            <span className="font-display text-lg font-bold tracking-tight">
-              CLI Dashboard
-            </span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
+              <span className="grid h-8 w-8 place-items-center rounded-md bg-ink font-mono text-sm font-bold text-paper">
+                &gt;_
+              </span>
+            </Link>
+            <div className="flex items-center gap-2 font-display text-lg font-bold tracking-tight">
+              <Link href={dashboardHref} className="text-ink-muted transition-colors hover:text-ink">
+                Dashboard
+              </Link>
+              <span className="text-ink-muted">/</span>
+              {groupName && (
+                <>
+                  <Link href={groupHref!} className="text-ink-muted transition-colors hover:text-ink">
+                    {groupName}
+                  </Link>
+                  <span className="text-ink-muted">/</span>
+                </>
+              )}
+              <span className="truncate max-w-[200px] sm:max-w-[300px]" title={sName}>
+                {sName}
+              </span>
+            </div>
+          </div>
           {isDemo ? (
             <span className="inline-flex items-center gap-2 rounded-full border border-ink/10 bg-paper-soft px-4 py-1.5 text-xs font-medium text-ink-muted">
               <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
@@ -77,7 +104,7 @@ function SessionContent() {
             href={backHref}
             className="inline-flex items-center gap-2 rounded-full border border-ink/10 bg-white px-4 py-2 text-sm font-medium shadow-material transition-colors hover:bg-paper-soft"
           >
-            ← Back to sessions
+            ← Back to {groupName ? groupName : "sessions"}
           </Link>
           <Link
             href={insightsHref}

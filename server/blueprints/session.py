@@ -83,13 +83,37 @@ def _apply_session_label(session_map, session_id: str, label: str):
     return session_map
 
 
+def _apply_session_group(session_map, session_id: str, group_name: str):
+    """Upsert a session's group name. An empty group_name clears it."""
+    session_map = [e for e in (session_map or []) if isinstance(e, dict)]
+    entry = _find_entry(session_map, session_id)
+    if group_name:
+        if entry is not None:
+            entry["group"] = {"name": group_name}
+        else:
+            session_map.append({"session_id": session_id, "name": "", "label": "None", "group": {"name": group_name}})
+        return session_map
+    
+    # Empty group name — clear the group field; drop the entry if name and label are also empty.
+    if entry is not None and "group" in entry:
+        del entry["group"]
+        if entry.get("label", "None") == "None" and not entry.get("name"):
+            session_map = [e for e in session_map if e is not entry]
+    return session_map
+
+
 @bp.post("/api/session/update")
 def update_session_name():
     data = request.get_json(silent=True) or {}
-    session_id = (data.get("session_id") or "").strip()
+    
+    session_ids = []
+    if "session_ids" in data and isinstance(data["session_ids"], list):
+        session_ids = [str(sid).strip() for sid in data["session_ids"] if str(sid).strip()]
+    elif data.get("session_id"):
+        session_ids = [str(data.get("session_id")).strip()]
 
-    if not session_id:
-        return jsonify({"error": "session_id is required"}), 400
+    if not session_ids:
+        return jsonify({"error": "session_id or session_ids is required"}), 400
 
     # Resolve the target user. Demo uses the shared viewer account (no auth),
     # mirroring /api/chats?demo=true; otherwise a valid session token is required.
@@ -107,10 +131,14 @@ def update_session_name():
 
     # Apply whichever fields were sent, leaving the others untouched.
     session_map = user.get("session_map")
-    if "name" in data:
-        session_map = _apply_session_name(session_map, session_id, (data.get("name") or "").strip())
-    if "label" in data:
-        session_map = _apply_session_label(session_map, session_id, (data.get("label") or "None").strip())
+    
+    for sid in session_ids:
+        if "name" in data:
+            session_map = _apply_session_name(session_map, sid, (data.get("name") or "").strip())
+        if "label" in data:
+            session_map = _apply_session_label(session_map, sid, (data.get("label") or "None").strip())
+        if "group" in data:
+            session_map = _apply_session_group(session_map, sid, (data.get("group") or "").strip())
 
     user_id = str(user.get("user_id") or user.get("_id"))
     variants = id_variants(user_id)

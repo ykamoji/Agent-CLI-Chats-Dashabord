@@ -12,6 +12,10 @@ export default function SessionCard({
   name,
   label = "None",
   agent,
+  groupSessions,
+  selectable,
+  selected,
+  onToggle,
 }: {
   sessionId: string;
   latestTimestamp: string;
@@ -19,6 +23,10 @@ export default function SessionCard({
   name?: string;
   label?: SessionLabel;
   agent?: string;
+  groupSessions?: { sessionId: string; name: string; agent?: string }[];
+  selectable?: boolean;
+  selected?: boolean;
+  onToggle?: (selected: boolean) => void;
 }) {
   const tagged = Boolean(name);
   const accent =
@@ -27,32 +35,59 @@ export default function SessionCard({
       : label === "Blue"
         ? "border-l-4 border-l-blue-500"
         : "";
-  return (
-    <Link
-      href={href}
-      className={`group flex flex-col rounded-2xl border border-ink/10 bg-white p-5 shadow-material transition-all hover:-translate-y-0.5 hover:shadow-material-lg ${accent}`}
-    >
+
+  const content = (
+    <>
       <div className="flex items-start justify-between">
-        <span className="text-[10px] font-medium uppercase tracking-wide text-ink-muted">
-          Session
-        </span>
+        <div className="flex items-center gap-2">
+          {selectable && (
+            <input
+              type="checkbox"
+              checked={selected}
+              readOnly
+              className="mr-1 h-4 w-4 rounded border-ink/30 text-ink focus:ring-ink"
+            />
+          )}
+          <span className="text-[10px] font-medium uppercase tracking-wide text-ink-muted">
+            {groupSessions ? "Group" : "Session"}
+          </span>
+        </div>
         <div className="flex items-center gap-2">
           {label !== "None" && (
             <span
               title={label}
-              className={`h-2.5 w-2.5 rounded-full ${label === "Green" ? "bg-green-500" : "bg-blue-500"
-                }`}
+              className={`h-2.5 w-2.5 rounded-full ${
+                label === "Green" ? "bg-green-500" : "bg-blue-500"
+              }`}
             />
           )}
-          <span
-            aria-hidden
-            className="text-ink-muted transition-transform group-hover:translate-x-0.5"
-          >
-            →
-          </span>
+          {!selectable && (
+            <span
+              aria-hidden
+              className="text-ink-muted transition-transform group-hover:translate-x-0.5"
+            >
+              →
+            </span>
+          )}
         </div>
       </div>
-      {tagged ? (
+      {groupSessions ? (
+        <>
+          <p
+            className="mt-2 font-display text-lg font-bold leading-snug tracking-tight"
+            title={name}
+          >
+            {name}
+          </p>
+          <ul className="mt-2 space-y-0.5">
+            {groupSessions.map((s) => (
+              <li key={s.sessionId} className="truncate font-mono text-xs text-ink-muted" title={s.sessionId}>
+                {s.name || s.sessionId}
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : tagged ? (
         <>
           <p
             className="mt-2 font-display text-lg font-bold leading-snug tracking-tight"
@@ -73,23 +108,61 @@ export default function SessionCard({
         </p>
       )}
       <div className="mt-auto pt-4 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-xs text-ink-muted">
-          <svg
-            className="h-3.5 w-3.5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="9" />
-            <path d="M12 7v5l3 2" />
-          </svg>
-          <span title={latestTimestamp}>{fmtTime(latestTimestamp)}</span>
+        {groupSessions ? (
+          <div className="text-xs font-medium text-ink-muted">
+            {groupSessions.length} {groupSessions.length === 1 ? "session" : "sessions"}
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 text-xs text-ink-muted">
+            <svg
+              className="h-3.5 w-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 2" />
+            </svg>
+            <span title={latestTimestamp}>{fmtTime(latestTimestamp)}</span>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-1">
+          {groupSessions ? (
+            Array.from(new Set(groupSessions.map((s) => s.agent).filter(Boolean))).map((ag) => (
+              <AgentBadge key={ag} agent={ag!} />
+            ))
+          ) : agent ? (
+            <AgentBadge agent={agent} />
+          ) : null}
         </div>
-        {agent && <AgentBadge agent={agent} />}
       </div>
+    </>
+  );
+
+  const baseClasses = `group flex flex-col rounded-2xl border bg-white p-5 shadow-material transition-all hover:-translate-y-0.5 hover:shadow-material-lg ${accent}`;
+  const borderClass = selected ? "border-ink ring-1 ring-ink" : "border-ink/10";
+
+  if (selectable) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          onToggle?.(!selected);
+        }}
+        className={`text-left ${baseClasses} ${borderClass}`}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <Link href={href} className={`${baseClasses} ${borderClass}`}>
+      {content}
     </Link>
   );
 }

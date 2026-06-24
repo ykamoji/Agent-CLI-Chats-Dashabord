@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import UserMenu from "@/components/UserMenu";
 import SessionCard from "@/components/SessionCard";
 import SessionCardSkeleton from "@/components/SessionCardSkeleton";
+import SessionGroupModal from "@/components/SessionGroupModal";
 import StatsCards from "@/components/StatsCards";
 import WeekSection from "@/components/WeekSection";
 import {
@@ -43,7 +44,10 @@ type WeekGroup = {
   key: number;
   label: string;
   defaultOpen: boolean;
-  sessions: SessionGroup[];
+  sessions: (SessionGroup & {
+    groupSessions?: { sessionId: string; name: string; agent?: string }[];
+    groupName?: string;
+  })[];
 };
 
 function DashboardContent() {
@@ -54,9 +58,11 @@ function DashboardContent() {
 
   const [sessions, setSessions] = useState<SessionGroup[]>([]);
   const [sessionMap, setSessionMap] = useState<SessionMap>([]);
+  const [groups, setGroups] = useState<{ name: string; session_list: string[] }[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [groupModalOpen, setGroupModalOpen] = useState(false);
   // Bumped on each manual Sync so StatsCards force-refreshes its own data.
   const [refreshNonce, setRefreshNonce] = useState(0);
 
@@ -78,6 +84,7 @@ function DashboardContent() {
           : await getChatsSummary({ forceRefresh: force });
         setSessions(data.sessions);
         setSessionMap(data.sessionMap);
+        setGroups(data.groups ?? []);
       } catch (err) {
         if (!isDemo && err instanceof ApiError && err.status === 401) {
           router.replace("/auth");
@@ -97,22 +104,63 @@ function DashboardContent() {
   }, [loadChats]);
 
   const sessionHref = (sid: string) =>
-    `/dashboard/session/${encodeURIComponent(sid)}${
-      isDemo ? `?demo=${encodeURIComponent(demoUser as string)}` : ""
+    `/dashboard/session/${encodeURIComponent(sid)}${isDemo ? `?demo=${encodeURIComponent(demoUser as string)}` : ""
     }`;
 
-  const insightsHref = `/dashboard/insights${
-    isDemo ? `?demo=${encodeURIComponent(demoUser as string)}` : ""
-  }`;
+  const groupHref = (gname: string) =>
+    `/dashboard/group/${encodeURIComponent(gname)}${isDemo ? `?demo=${encodeURIComponent(demoUser as string)}` : ""
+    }`;
+
+  const insightsHref = `/dashboard/insights${isDemo ? `?demo=${encodeURIComponent(demoUser as string)}` : ""
+    }`;
 
   const busy = loading || refreshing;
+
+  const displaySessions = useMemo(() => {
+    const sessionToGroup = new Map<string, typeof groups[0]>();
+    for (const g of groups) {
+      for (const sid of g.session_list) {
+        sessionToGroup.set(sid, g);
+      }
+    }
+
+    const seenGroups = new Set<string>();
+    const result: (SessionGroup & { groupSessions?: { sessionId: string; name: string; agent?: string }[], groupName?: string })[] = [];
+
+    for (const s of sessions) {
+      const group = sessionToGroup.get(s.sessionId);
+      if (group) {
+        if (!seenGroups.has(group.name)) {
+          seenGroups.add(group.name);
+          const gSessions = group.session_list.map((sid) => {
+            const ss = sessions.find(x => x.sessionId === sid);
+            return {
+              sessionId: sid,
+              name: sessionName(sessionMap, sid),
+              agent: ss?.agent,
+            };
+          });
+          result.push({
+            sessionId: group.session_list[0] || s.sessionId,
+            latestTs: s.latestTs,
+            count: group.session_list.reduce((acc, sid) => acc + (sessions.find(x => x.sessionId === sid)?.count || 0), 0),
+            groupName: group.name,
+            groupSessions: gSessions,
+          });
+        }
+      } else {
+        result.push(s);
+      }
+    }
+    return result;
+  }, [sessions, groups, sessionMap]);
 
   // Group sessions into weeks (most recent first); only the current week is
   // open by default — or the latest week if there's nothing in the current one.
   const weekGroups = useMemo<WeekGroup[]>(() => {
     const currentWeek = weekStartMs(Date.now());
     const buckets = new Map<number, SessionGroup[]>();
-    for (const s of sessions) {
+    for (const s of displaySessions) {
       const t = Date.parse(s.latestTs);
       const key = Number.isNaN(t) ? -1 : weekStartMs(t);
       (buckets.get(key) ?? buckets.set(key, []).get(key)!).push(s);
@@ -120,17 +168,17 @@ function DashboardContent() {
     const keys = [...buckets.keys()].sort((a, b) =>
       a === -1 ? 1 : b === -1 ? -1 : b - a
     );
-    const groups = keys.map((key) => ({
+    const resultGroups = keys.map((key) => ({
       key,
       label: weekLabel(key, currentWeek),
       defaultOpen: key === currentWeek,
       sessions: buckets.get(key)!,
     }));
-    if (groups.length && !groups.some((g) => g.defaultOpen)) {
-      groups[0].defaultOpen = true; // fallback: open the most recent week
+    if (resultGroups.length && !resultGroups.some((g) => g.defaultOpen)) {
+      resultGroups[0].defaultOpen = true; // fallback: open the most recent week
     }
-    return groups;
-  }, [sessions]);
+    return resultGroups;
+  }, [displaySessions]);
 
   return (
     <main className="min-h-screen bg-paper text-ink">
@@ -191,6 +239,26 @@ function DashboardContent() {
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-display text-lg font-bold">Sessions</h2>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setGroupModalOpen(true)}
+                className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft"
+              >
+                <svg
+                  className="h-3.5 w-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M4 6h16" />
+                  <path d="M4 12h16" />
+                  <path d="M4 18h16" />
+                </svg>
+                Manage sessions
+              </button>
               <Link
                 href={insightsHref}
                 className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft"
@@ -262,13 +330,14 @@ function DashboardContent() {
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {g.sessions.map((s) => (
                       <SessionCard
-                        key={s.sessionId}
+                        key={s.groupName ? `group-${s.groupName}` : s.sessionId}
                         sessionId={s.sessionId}
                         latestTimestamp={s.latestTs}
-                        href={sessionHref(s.sessionId)}
-                        name={sessionName(sessionMap, s.sessionId)}
+                        href={s.groupName ? groupHref(s.groupName) : sessionHref(s.sessionId)}
+                        name={s.groupName || sessionName(sessionMap, s.sessionId)}
                         label={sessionLabel(sessionMap, s.sessionId)}
                         agent={s.agent}
+                        groupSessions={s.groupSessions}
                       />
                     ))}
                   </div>
@@ -278,6 +347,15 @@ function DashboardContent() {
           )}
         </div>
       </div>
+      <SessionGroupModal
+        open={groupModalOpen}
+        onClose={() => setGroupModalOpen(false)}
+        sessions={sessions}
+        sessionMap={sessionMap}
+        groups={groups}
+        onUpdate={() => loadChats("refresh")}
+        isDemo={isDemo}
+      />
     </main>
   );
 }
