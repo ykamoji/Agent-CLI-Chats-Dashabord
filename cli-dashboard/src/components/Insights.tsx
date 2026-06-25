@@ -7,7 +7,6 @@ import {
   type InsightsMetrics,
   type InsightsResponse,
 } from "@/lib/api";
-import DeterministicPanel from "@/components/DeterministicPanel";
 import AiInsightsPanel from "@/components/AiInsightsPanel";
 import SidePanel from "@/components/SidePanel";
 
@@ -91,6 +90,34 @@ function DeterministicPanel({ m }: { m: InsightsMetrics }) {
   );
 }
 
+function MorphingStar({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={`animate-[spin_4s_linear_infinite] ${className}`}>
+      <defs>
+        <linearGradient id="geminiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#3b82f6" />
+          <stop offset="50%" stopColor="#8b5cf6" />
+          <stop offset="100%" stopColor="#d946ef" />
+        </linearGradient>
+      </defs>
+      <path fill="url(#geminiGrad)">
+        <animate
+          attributeName="d"
+          dur="4s"
+          repeatCount="indefinite"
+          calcMode="spline"
+          keySplines="0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1"
+          values="
+            M12 2C12 2 12 10.5 20.5 10.5C12 10.5 12 19 12 19C12 19 12 10.5 3.5 10.5C12 10.5 12 2 12 2Z;
+            M12 2C17.52 2 22 6.48 22 12C22 17.52 17.52 22 12 22C6.48 22 2 17.52 2 12C2 6.48 6.48 2 12 2Z;
+            M12 3C15 5 19 5 21 12C19 19 15 19 12 21C9 19 5 19 3 12C5 5 9 5 12 3Z;
+            M12 2C12 2 12 10.5 20.5 10.5C12 10.5 12 19 12 19C12 19 12 10.5 3.5 10.5C12 10.5 12 2 12 2Z"
+        />
+      </path>
+    </svg>
+  );
+}
+
 function GenerateButton({
   busy,
   hasExisting,
@@ -105,13 +132,10 @@ function GenerateButton({
       type="button"
       onClick={onGenerate}
       disabled={busy}
-      className="inline-flex shrink-0 items-center gap-2 rounded-full border border-ink/10 bg-ink px-4 py-1.5 text-xs font-medium text-paper transition-colors hover:bg-ink/80 disabled:cursor-not-allowed disabled:opacity-60"
+      className="inline-flex shrink-0 items-center gap-2 rounded-full border border-ink/15 bg-white shadow-material text-ink px-4 py-1.5 text-xs font-medium transition-colors hover:bg-ink hover:text-paper disabled:cursor-not-allowed"
     >
       {busy && (
-        <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-          <path d="M21 3v6h-6" />
-        </svg>
+        <MorphingStar className="h-3.5 w-3.5" />
       )}
       {busy ? "Analyzing…" : hasExisting ? "Regenerate" : "Generate"}
     </button>
@@ -140,6 +164,7 @@ export default function Insights({
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [showPast, setShowPast] = useState(false);
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -204,7 +229,7 @@ export default function Insights({
             <div className="relative h-14 w-full overflow-hidden rounded-2xl bg-white border border-ink/5 flex items-center px-5 shadow-sm">
               <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-blue-500/10 to-transparent animate-shimmer" />
               <span className="relative flex items-center gap-3 text-sm font-medium text-ink-muted">
-                <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                <MorphingStar className="h-10 w-10" />
                 Analyzing conversations...
               </span>
             </div>
@@ -235,29 +260,79 @@ export default function Insights({
             </div>
           )}
 
-          <SidePanel isOpen={panelOpen} onClose={() => setPanelOpen(false)} title="Insights Details">
-            {data && <DeterministicPanel m={data.metrics} />}
+          <SidePanel
+            isOpen={panelOpen}
+            onClose={() => {
+              setPanelOpen(false);
+              setTimeout(() => setShowPast(false), 300);
+            }}
+            title="Gemini Insights"
+          >
+            {!showPast ? (
+              <>
+                {data && <DeterministicPanel m={data.metrics} />}
 
-            <div className="flex items-center justify-between mt-4">
-              <h3 className="font-display text-lg font-bold">AI Analysis</h3>
-              {canGenerate && (
-                <GenerateButton busy={busy} hasExisting={docs.length > 0} onGenerate={onGenerate} />
-              )}
-            </div>
+                <div className="flex items-center justify-between mt-4">
+                  {/* <h3 className="font-display text-lg font-bold">Analysis</h3> */}
+                  <div className="flex items-center gap-2">
+                    {canGenerate && (
+                      <GenerateButton busy={busy} hasExisting={docs.length > 0} onGenerate={onGenerate} />
+                    )}
+                    <button
+                      onClick={() => setShowPast(true)}
+                      className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-ink hover:text-paper"
+                    >
+                      <svg
+                        className="h-3.5 w-3.5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M3 3v18h18" />
+                        <path d="m19 9-5 5-4-4-3 3" />
+                      </svg>
+                      Past Gemini insights →
+                    </button>
+                  </div>
+                </div>
 
-            {error && <p className="text-sm text-red-500">{error}</p>}
+                {error && <p className="text-sm text-red-500">{error}</p>}
 
-            {docs.length === 0 && modelAvailable && !isDemo && !generating && (
-              <div className="rounded-2xl border border-ink/10 bg-white p-6 text-center shadow-material mt-2">
-                <p className="text-sm text-ink-muted">
-                  No insights yet. Click the generate button to analyze your history.
-                </p>
-              </div>
-            )}
+                {docs.length === 0 && modelAvailable && !isDemo && !generating && (
+                  <div className="rounded-2xl border border-ink/10 bg-white p-6 text-center shadow-material mt-2">
+                    <p className="text-sm text-ink-muted">
+                      No insights yet. Click the generate button to analyze your history.
+                    </p>
+                  </div>
+                )}
 
-            {docs.length > 0 && (
-              <div className="mt-2">
-                <AiInsightsPanel key={docs[0].timestamp ?? 0} doc={docs[0]} scope={scope} />
+                {docs.length > 0 && (
+                  <div className="mt-2">
+                    <AiInsightsPanel key={docs[0].timestamp ?? 0} doc={docs[0]} scope={scope} />
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex flex-col gap-6">
+                <button
+                  onClick={() => setShowPast(false)}
+                  className="inline-flex items-center gap-2 rounded-full border border-ink/10 bg-white px-4 py-2 text-sm font-medium shadow-material transition-colors hover:bg-paper-soft self-start"
+                >
+                  ← Back to current insights
+                </button>
+
+                {pastDocs.length === 0 ? (
+                  <p className="rounded-2xl border border-ink/10 bg-white px-5 py-8 text-center text-sm text-ink-muted shadow-material">
+                    No past insights available.
+                  </p>
+                ) : (
+                  pastDocs.map((doc, i) => (
+                    <AiInsightsPanel key={doc.timestamp ?? i} doc={doc} scope={scope} />
+                  ))
+                )}
               </div>
             )}
           </SidePanel>

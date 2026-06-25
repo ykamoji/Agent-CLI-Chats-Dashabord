@@ -23,9 +23,7 @@ function SessionContent() {
 
   const demoUser = searchParams.get("demo");
   const isDemo = Boolean(demoUser);
-  const insightsHref = `/dashboard/session/${encodeURIComponent(sessionId)}/insights${
-    isDemo ? `?demo=${encodeURIComponent(demoUser as string)}` : ""
-  }`;
+
 
   const {
     chats,
@@ -100,30 +98,12 @@ function SessionContent() {
         }`}
       >
         {/* Back + insights */}
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 mb-6">
           <Link
-            href={backHref}
+            href={groupHref || dashboardHref}
             className="inline-flex items-center gap-2 rounded-full border border-ink/10 bg-white px-4 py-2 text-sm font-medium shadow-material transition-colors hover:bg-paper-soft"
           >
-            ← Back to {groupName ? groupName : "sessions"}
-          </Link>
-          <Link
-            href={insightsHref}
-            className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-medium text-ink shadow-material transition-colors hover:bg-paper-soft"
-          >
-            <svg
-              className="h-3.5 w-3.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M3 3v18h18" />
-              <path d="m19 9-5 5-4-4-3 3" />
-            </svg>
-            Past AI insights →
+            ← Back to {groupHref ? `group ${groupName}` : "dashboard"}
           </Link>
         </div>
 

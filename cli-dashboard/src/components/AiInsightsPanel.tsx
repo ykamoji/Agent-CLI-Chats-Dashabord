@@ -49,7 +49,7 @@ export default function AiInsightsPanel({
       >
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h2 className="font-display text-lg font-bold">AI insights</h2>
+            <h2 className="font-display text-lg font-bold">Insights</h2>
             {hasCompleteData && (
               <svg
                 className={`h-4 w-4 shrink-0 text-paper/50 transition-transform duration-300 ${aiOpen ? "rotate-180" : ""

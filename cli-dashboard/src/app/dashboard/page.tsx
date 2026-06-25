@@ -108,9 +108,6 @@ function DashboardContent() {
     `/dashboard/group/${encodeURIComponent(gname)}${isDemo ? `?demo=${encodeURIComponent(demoUser as string)}` : ""
     }`;
 
-  const insightsHref = `/dashboard/insights${isDemo ? `?demo=${encodeURIComponent(demoUser as string)}` : ""
-    }`;
-
   const busy = loading || refreshing;
 
   const displaySessions = useMemo(() => {
@@ -261,24 +258,7 @@ function DashboardContent() {
                 </svg>
                 Manage sessions
               </button>
-              <Link
-                href={insightsHref}
-                className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft"
-              >
-                <svg
-                  className="h-3.5 w-3.5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M3 3v18h18" />
-                  <path d="m19 9-5 5-4-4-3 3" />
-                </svg>
-                Past AI insights →
-              </Link>
+
               <button
                 type="button"
                 onClick={() => loadChats("refresh")}

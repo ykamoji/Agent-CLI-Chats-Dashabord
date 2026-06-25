@@ -35,21 +35,19 @@ export default function SidePanel({
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-50 transition-all duration-300 ${
-        isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-      }`}
+      className={`fixed inset-0 z-50 transition-all duration-300 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
     >
       {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-ink/40 backdrop-blur-sm transition-opacity" 
-        onClick={onClose} 
+      <div
+        className="absolute inset-0 bg-ink/40 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
       />
 
       {/* Panel */}
       <div
-        className={`absolute top-0 left-0 h-full w-full max-w-lg bg-paper shadow-2xl transition-transform duration-300 ease-in-out transform flex flex-col border-r border-ink/10 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`absolute top-0 right-0 h-full w-full max-w-6xl bg-paper shadow-2xl transition-transform duration-300 ease-in-out transform flex flex-col border-l border-ink/10 ${isOpen ? "translate-x-0" : "translate-x-full"
+          }`}
       >
         <div className="flex items-center justify-between border-b border-ink/10 px-6 py-4 bg-white">
           <h2 className="font-display text-xl font-bold tracking-tight text-ink flex items-center gap-2">
@@ -86,7 +84,7 @@ export default function SidePanel({
             </svg>
           </button>
         </div>
-        
+
         <div className="flex-1 overflow-y-auto p-6 bg-paper space-y-6">
           {children}
         </div>
