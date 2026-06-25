@@ -1,0 +1,62 @@
+services:
+  # Backend: Flask Service
+  - type: web
+    plan: free
+    name: agent_cli_mcp
+    runtime: python
+    rootDir: server
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --timeout 900 --bind 0.0.0.0:$PORT -k gthread --threads 8 --workers 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: MONGO_URI
+        sync: false
+      - key: DB_NAME
+        value: vibe_coding
+        sync: false
+      - key: USERS_COLLECTION
+        value: users
+      - key: LOGS_COLLECTION
+        value: logs
+      - key: SESSIONS_COLLECTION
+        value: sessions
+      - key: INSIGHTS_COLLECTION
+        value: insights
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: GOOGLE_MODEL_NAME
+        value: gemini-3.1-flash-lite
+      - key: INSIGHTS_MAX_TURNS
+        value: "1000"
+      - key: INSIGHTS_INPUT_TRUNC
+        value: "100"
+      - key: INSIGHTS_MIN_REGEN_SECONDS
+        value: "60"
+      - key: SESSION_TTL_MINUTES
+        value: "15"
+      - key: CHATS_CACHE_TTL
+        value: "60"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PORT
+        value: "5000"
+      - key: CORS_ORIGINS
+        sync: false
+
+  # Frontend: Next.js Service
+  - type: web
+    plan: free
+    name: agent_cli_dashboard
+    runtime: node
+    rootDir: cli-dashboard
+    buildCommand: npm install -g pnpm && pnpm install && pnpm run build
+    startCommand: pnpm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 24.x
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          name: agent_cli_mcp
+          type: web
+          property: host

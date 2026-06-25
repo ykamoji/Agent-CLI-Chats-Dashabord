@@ -3,8 +3,9 @@
 // The server endpoint URL is read from NEXT_PUBLIC_API_URL (see .env.local),
 // falling back to the local dev server. Change this one variable to point the
 // whole UI at a different backend.
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5050";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL
+  ? `https://${process.env.NEXT_PUBLIC_API_URL}.onrender.com`
+  : "http://localhost:5000";
 
 export type User = {
   user_id: string;
