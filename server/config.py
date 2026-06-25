@@ -37,5 +37,6 @@ SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-me")
 PORT = int(os.getenv("PORT", "5000"))
 
 CORS_ORIGINS = [
-    o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()
+    o.strip().strip("'").strip('"').rstrip("/") 
+    for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()
 ]
