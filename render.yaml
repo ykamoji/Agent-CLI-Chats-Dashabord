@@ -14,7 +14,6 @@ services:
         sync: false
       - key: DB_NAME
         value: vibe_coding
-        sync: false
       - key: USERS_COLLECTION
         value: users
       - key: LOGS_COLLECTION
