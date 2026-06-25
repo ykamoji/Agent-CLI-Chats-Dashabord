@@ -512,10 +512,17 @@ export type InsightsDoc = {
   error: string | null;
 };
 
+export type InsightsConfig = {
+  maxTurns: number;
+  inputTrunc: number;
+  model: string;
+};
+
 export type InsightsResponse = {
   docs: InsightsDoc[];
   metrics: InsightsMetrics;
   modelAvailable: boolean;
+  config?: InsightsConfig;
 };
 
 const insightsCache = new Map<string, { data: InsightsResponse, chatCount?: number, timestamp: number }>();
@@ -580,15 +587,16 @@ export async function generateInsights(opts: {
   groupName?: string;
   sessionIds?: string[];
   force?: boolean;
+  config?: InsightsConfig;
 }): Promise<{ status: string }> {
-  const { scope, sessionId, groupName, sessionIds, force } = opts;
+  const { scope, sessionId, groupName, sessionIds, force, config } = opts;
   const uid = getStoredUser()?.user_id;
   const qs = uid ? `?user_id=${encodeURIComponent(uid)}` : "";
   return request<{ status: string }>(
     `/api/insights${qs}`,
     {
       method: "POST",
-      body: JSON.stringify({ scope, session_id: sessionId, group_name: groupName, session_ids: sessionIds, force }),
+      body: JSON.stringify({ scope, session_id: sessionId, group_name: groupName, session_ids: sessionIds, force, config }),
     },
     true
   );

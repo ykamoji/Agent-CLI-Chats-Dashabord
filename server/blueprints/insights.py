@@ -56,12 +56,12 @@ def _all_docs(user_id: str, scope: str, session_id: str | None = None, group_nam
     return list(insights_collection().find(query).sort("timestamp", -1))
 
 
-def _generate_and_store(doc_id, user_id: str, scope: str, session_ids: list[str] | str | None):
+def _generate_and_store(doc_id, user_id: str, scope: str, session_ids: list[str] | str | None, custom_config: dict | None = None):
     """Background worker: run the model and update the pending row."""
     coll = insights_collection()
     try:
         metrics = compute_metrics(user_id, session_ids)
-        result = insights_llm.generate(user_id, scope, session_ids, metrics)
+        result = insights_llm.generate(user_id, scope, session_ids, metrics, custom_config)
         if result is None:
             coll.update_one(
                 {"_id": doc_id},
@@ -154,9 +154,11 @@ def create_insights():
     }
     doc_id = coll.insert_one(doc).inserted_id
 
+    custom_config = data.get("config")
+
     threading.Thread(
         target=_generate_and_store,
-        args=(doc_id, str(user_id), scope, session_ids_for_generation),
+        args=(doc_id, str(user_id), scope, session_ids_for_generation, custom_config),
         daemon=True,
     ).start()
 
@@ -169,7 +171,16 @@ def read_insights():
     if not user_id:
         if not is_demo:
             return jsonify({"error": "invalid_or_expired_session"}), 401
-        return jsonify({"docs": [], "metrics": {}, "modelAvailable": insights_llm.is_available()})
+        return jsonify({
+            "docs": [], 
+            "metrics": {}, 
+            "modelAvailable": insights_llm.is_available(),
+            "config": {
+                "maxTurns": config.INSIGHTS_MAX_TURNS,
+                "inputTrunc": config.INSIGHTS_INPUT_TRUNC,
+                "model": config.GOOGLE_MODEL_NAME
+            }
+        })
 
     scope = request.args.get("scope") or "global"
     session_id = request.args.get("session_id") if scope == "session" else None
@@ -187,4 +198,9 @@ def read_insights():
         "docs": [json_safe(d) for d in all_docs],
         "metrics": metrics,
         "modelAvailable": insights_llm.is_available(),
+        "config": {
+            "maxTurns": config.INSIGHTS_MAX_TURNS,
+            "inputTrunc": config.INSIGHTS_INPUT_TRUNC,
+            "model": config.GOOGLE_MODEL_NAME
+        }
     })

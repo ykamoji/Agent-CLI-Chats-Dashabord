@@ -19,8 +19,8 @@ INSIGHTS_COLLECTION = os.getenv("INSIGHTS_COLLECTION", "insights")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 GOOGLE_MODEL_NAME = os.getenv("GOOGLE_MODEL_NAME", "gemini-2.0-flash")
 # How many recent turns to feed the model, and how far to truncate each Input.
-INSIGHTS_MAX_TURNS = int(os.getenv("INSIGHTS_MAX_TURNS", "60"))
-INSIGHTS_INPUT_TRUNC = int(os.getenv("INSIGHTS_INPUT_TRUNC", "300"))
+INSIGHTS_MAX_TURNS = int(os.getenv("INSIGHTS_MAX_TURNS", "1000"))
+INSIGHTS_INPUT_TRUNC = int(os.getenv("INSIGHTS_INPUT_TRUNC", "1000"))
 # Don't regenerate if a completed insight is newer than this (seconds) unless forced.
 INSIGHTS_MIN_REGEN_SECONDS = int(os.getenv("INSIGHTS_MIN_REGEN_SECONDS", "60"))
 

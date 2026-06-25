@@ -6,9 +6,11 @@ import {
   getInsights,
   type InsightsMetrics,
   type InsightsResponse,
+  type InsightsConfig,
 } from "@/lib/api";
 import AiInsightsPanel from "@/components/AiInsightsPanel";
 import SidePanel from "@/components/SidePanel";
+import ModelSelect from "@/components/ModelSelect";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -165,6 +167,8 @@ export default function Insights({
   const [error, setError] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [showPast, setShowPast] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [customConfig, setCustomConfig] = useState<InsightsConfig | null>(null);
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -177,7 +181,11 @@ export default function Insights({
   const load = useCallback(async () => {
     try {
       const r = await getInsights({ scope, sessionId, groupName, sessionIds, chatCount, demo: isDemo });
-      if (mounted.current) setData(r);
+      if (!mounted.current) return;
+      setData(r);
+      if (r.config && !customConfig) {
+        setCustomConfig(r.config);
+      }
     } catch {
       if (mounted.current) setError("Could not load insights.");
     } finally {
@@ -192,8 +200,9 @@ export default function Insights({
   const onGenerate = useCallback(async () => {
     setGenerating(true);
     setError(null);
+    setShowSettings(false);
     try {
-      await generateInsights({ scope, sessionId, groupName, sessionIds, force: true });
+      await generateInsights({ scope, sessionId, groupName, sessionIds, force: true, config: customConfig || undefined });
       const start = Date.now();
       // Poll until the background job finishes (or we time out).
       while (mounted.current && Date.now() - start < 60_000) {
@@ -274,9 +283,51 @@ export default function Insights({
 
                 <div className="flex items-center justify-between mt-4">
                   {/* <h3 className="font-display text-lg font-bold">Analysis</h3> */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 relative">
                     {canGenerate && (
-                      <GenerateButton busy={busy} hasExisting={docs.length > 0} onGenerate={onGenerate} />
+                      <>
+                        <button
+                          onClick={() => setShowSettings(!showSettings)}
+                          title="Generation Settings"
+                          className="flex h-[30px] w-[30px] items-center justify-center rounded-full border border-ink/15 bg-white text-ink shadow-material transition-colors hover:bg-ink hover:text-paper"
+                        >
+                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+
+                        {showSettings && customConfig && (
+                          <div className="absolute top-full right-0 lg:left-0 z-50 mt-2 w-[280px] rounded-xl border border-ink/10 bg-white p-4 shadow-material animate-in fade-in zoom-in-95">
+                            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-muted">Generation Settings</h4>
+                            <div className="space-y-3">
+                              <div>
+                                <label className="mb-1 block text-xs text-ink/70">Max Turns Analyzed</label>
+                                <input 
+                                  type="number" 
+                                  value={customConfig.maxTurns} 
+                                  onChange={(e) => setCustomConfig({ ...customConfig, maxTurns: parseInt(e.target.value) || 10 })}
+                                  className="w-full rounded-lg border border-ink/15 bg-paper px-3 py-2 text-xs text-ink outline-none focus:border-ink/30"
+                                />
+                              </div>
+                              <div>
+                                <label className="mb-1 block text-xs text-ink/70">Max Input Size (chars)</label>
+                                <input 
+                                  type="number" 
+                                  value={customConfig.inputTrunc} 
+                                  onChange={(e) => setCustomConfig({ ...customConfig, inputTrunc: parseInt(e.target.value) || 100 })}
+                                  className="w-full rounded-lg border border-ink/15 bg-paper px-3 py-2 text-xs text-ink outline-none focus:border-ink/30"
+                                />
+                              </div>
+                              <div>
+                                <label className="mb-1 block text-[11px] font-semibold tracking-wide uppercase text-ink/60">Model</label>
+                                <ModelSelect 
+                                  value={customConfig.model} 
+                                  onChange={(model) => setCustomConfig({ ...customConfig, model })} 
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        <GenerateButton busy={busy} hasExisting={docs.length > 0} onGenerate={onGenerate} />
+                      </>
                     )}
                     <button
                       onClick={() => setShowPast(true)}

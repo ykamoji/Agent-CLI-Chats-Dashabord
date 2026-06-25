@@ -39,7 +39,7 @@ def _get_client():
     return _client
 
 
-def _build_digest(user_id: str, session_ids: list[str] | str | None) -> list[dict]:
+def _build_digest(user_id: str, session_ids: list[str] | str | None, max_turns: int, input_trunc: int) -> list[dict]:
     """Compact, token-bounded per-turn digest (most recent turns first)."""
     query = {"user_id": {"$in": id_variants(user_id)}}
     if session_ids:
@@ -60,7 +60,7 @@ def _build_digest(user_id: str, session_ids: list[str] | str | None) -> list[dic
     }
     docs = list(logs_collection().find(query, projection))
     docs.sort(key=_ts, reverse=True)
-    docs = docs[: config.INSIGHTS_MAX_TURNS]
+    docs = docs[: max_turns]
 
     digest = []
     for d in docs:
@@ -78,7 +78,7 @@ def _build_digest(user_id: str, session_ids: list[str] | str | None) -> list[dic
         digest.append(
             {
                 "session": (d.get("session_id") or "unknown")[:8],
-                "prompt": (d.get("Input") or "")[: config.INSIGHTS_INPUT_TRUNC],
+                "prompt": (d.get("Input") or "")[: input_trunc],
                 "tools": tools,
                 "output_empty": not _norm(d.get("Output")),
                 "error": error_snippet,
@@ -122,14 +122,26 @@ Based on the provided data, return a JSON payload matching the requested schema.
 """
 
 
-def generate(user_id: str, scope: str, session_ids: list[str] | str | None, metrics: dict) -> dict | None:
+def generate(user_id: str, scope: str, session_ids: list[str] | str | None, metrics: dict, custom_config: dict | None = None) -> dict | None:
     """Run Gemini. Returns the structured insight dict, or None if unavailable."""
     if not is_available():
         return None
 
-    digest = _build_digest(user_id, session_ids)
+    c_max_turns = config.INSIGHTS_MAX_TURNS
+    c_input_trunc = config.INSIGHTS_INPUT_TRUNC
+    c_model = config.GOOGLE_MODEL_NAME
+
+    if custom_config:
+        if custom_config.get("maxTurns"):
+            c_max_turns = int(custom_config["maxTurns"])
+        if custom_config.get("inputTrunc"):
+            c_input_trunc = int(custom_config["inputTrunc"])
+        if custom_config.get("model"):
+            c_model = custom_config["model"]
+
+    digest = _build_digest(user_id, session_ids, c_max_turns, c_input_trunc)
     response = _get_client().models.generate_content(
-        model=config.GOOGLE_MODEL_NAME,
+        model=c_model,
         contents=_prompt(scope, metrics, digest),
         config={
             "temperature": 0.5,
