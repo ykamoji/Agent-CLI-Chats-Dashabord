@@ -68,7 +68,7 @@ function AuthForm() {
   }
 
   return (
-    <div className="w-full max-w-md">
+    <div className="w-full max-w-xl">
       {/* Toggle */}
       <div className="mb-8 grid grid-cols-2 gap-1 rounded-full border border-ink/10 bg-paper-soft p-1">
         {(["signin", "signup"] as const).map((m) => (
@@ -80,8 +80,8 @@ function AuthForm() {
               setError(null);
             }}
             className={`rounded-full py-2 text-sm font-medium transition-colors ${mode === m
-                ? "bg-ink text-paper shadow-material"
-                : "text-ink-muted hover:text-ink"
+              ? "bg-ink text-paper shadow-material"
+              : "text-ink-muted hover:text-ink"
               }`}
           >
             {m === "signin" ? "Sign in" : "Sign up"}
@@ -204,8 +204,8 @@ export default function AuthPage() {
       >
         ← Back home
       </Link>
-      <div className="relative z-10 rounded-3xl border border-ink/10 bg-white p-8 shadow-material-lg sm:p-10">
-        <Suspense fallback={<div className="h-96 w-full max-w-md" />}>
+      <div className="relative z-10 w-full max-w-2xl rounded-3xl border border-ink/10 bg-white p-8 shadow-material-lg sm:p-10">
+        <Suspense fallback={<div className="h-96 w-full max-w-xl" />}>
           <AuthForm />
         </Suspense>
       </div>

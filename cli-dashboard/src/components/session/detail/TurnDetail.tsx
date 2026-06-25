@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import ToolCard from "@/components/ToolCard";
+import ToolCard from "@/components/session/detail/ToolCard";
 import { type Row, type ToolUse } from "@/lib/chats";
 import { getTurnTools } from "@/lib/api";
 
-// Presentational detail for a single turn: Input + the individual tool calls,
+// Presentational detail for a single Conversation: Input + the individual tool calls,
 // styled exactly like the previous inline "expanded row" view. Reused by the
 // slide-over detail panel.
 export default function TurnDetail({ row }: { row: Row }) {
@@ -60,7 +60,7 @@ export default function TurnDetail({ row }: { row: Row }) {
           )}
         </div>
         {row.toolCount === 0 ? (
-          <p className="text-xs text-ink-muted">No tools used in this turn.</p>
+          <p className="text-xs text-ink-muted">No tools used in this Conversation.</p>
         ) : loading ? (
           <div className="flex items-center gap-2 text-xs text-ink-muted">
             <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

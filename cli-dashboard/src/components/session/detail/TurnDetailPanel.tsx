@@ -1,10 +1,10 @@
 "use client";
 
-import TurnDetail from "@/components/TurnDetail";
+import TurnDetail from "@/components/session/detail/TurnDetail";
 import { fmtTime, type Row } from "@/lib/chats";
 
 // Slide-over panel anchored to the right edge. It slides in (leftward) when a
-// turn is selected and slides back out (rightward) when closed. A small "<"
+// Conversation is selected and slides back out (rightward) when closed. A small "<"
 // bookmark tab on the edge re-opens it.
 export default function TurnDetailPanel({
   row,
@@ -25,8 +25,8 @@ export default function TurnDetailPanel({
   const agentLabel = isClaude
     ? "Claude"
     : (agent ?? "").toLowerCase().includes("anti")
-    ? "Antigravity"
-    : agent || "";
+      ? "Antigravity"
+      : agent || "";
 
   return (
     <>
@@ -58,15 +58,14 @@ export default function TurnDetailPanel({
       {/* Slide-over panel */}
       <aside
         aria-hidden={!open}
-        className={`fixed right-0 top-0 z-40 flex h-screen w-full flex-col border-l border-ink/15 bg-paper shadow-material transition-transform duration-300 ease-out lg:w-1/2 ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`fixed right-0 top-0 z-40 flex h-screen w-full flex-col border-l border-ink/15 bg-paper shadow-material transition-transform duration-300 ease-out lg:w-1/2 ${open ? "translate-x-0" : "translate-x-full"
+          }`}
       >
         {/* Header */}
         <div className="flex items-center justify-between gap-3 border-b border-ink/10 bg-white px-5 py-4">
           <div className="min-w-0">
             <p className="text-[10px] font-medium uppercase tracking-wide text-ink-muted">
-              Turn details
+              Conversation details
             </p>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               {rowNumber != null && (
@@ -79,16 +78,14 @@ export default function TurnDetailPanel({
               )}
               {agentLabel && (
                 <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    isClaude
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${isClaude
                       ? "bg-ink text-paper"
                       : "border border-ink/20 bg-white text-ink"
-                  }`}
+                    }`}
                 >
                   <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      isClaude ? "bg-paper" : "bg-ink"
-                    }`}
+                    className={`h-1.5 w-1.5 rounded-full ${isClaude ? "bg-paper" : "bg-ink"
+                      }`}
                   />
                   {agentLabel}
                 </span>
@@ -118,7 +115,7 @@ export default function TurnDetailPanel({
             <TurnDetail row={row} />
           ) : (
             <p className="text-sm text-ink-muted">
-              Select a turn from the table to view its details.
+              Select a Conversation from the table to view its details.
             </p>
           )}
         </div>

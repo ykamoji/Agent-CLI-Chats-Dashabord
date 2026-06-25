@@ -5,6 +5,7 @@ from flask_cors import CORS
 import config
 from blueprints.authenticate import bp as authenticate_bp
 from blueprints.chats import bp as chats_bp
+from blueprints.insights import bp as insights_bp
 from blueprints.profile import bp as profile_bp
 from blueprints.session import bp as session_bp
 from cache import init_cache
@@ -21,6 +22,7 @@ def create_app() -> Flask:
     app.register_blueprint(authenticate_bp)
     app.register_blueprint(session_bp)
     app.register_blueprint(chats_bp)
+    app.register_blueprint(insights_bp)
     app.register_blueprint(profile_bp)
 
     @app.get("/api/health")

@@ -12,6 +12,17 @@ DB_NAME = os.getenv("DB_NAME", "vibe_coding")
 USERS_COLLECTION = os.getenv("USERS_COLLECTION", "users")
 LOGS_COLLECTION = os.getenv("LOGS_COLLECTION", "logs")
 SESSIONS_COLLECTION = os.getenv("SESSIONS_COLLECTION", "sessions")
+INSIGHTS_COLLECTION = os.getenv("INSIGHTS_COLLECTION", "insights")
+
+# Gemini (google-genai) — AI-generated insights. When GOOGLE_API_KEY is unset
+# the feature degrades to deterministic-only metrics.
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
+GOOGLE_MODEL_NAME = os.getenv("GOOGLE_MODEL_NAME", "gemini-2.0-flash")
+# How many recent Conversations to feed the model, and how far to truncate each Input.
+INSIGHTS_MAX_TURNS = int(os.getenv("INSIGHTS_MAX_TURNS", "1000"))
+INSIGHTS_INPUT_TRUNC = int(os.getenv("INSIGHTS_INPUT_TRUNC", "1000"))
+# Don't regenerate if a completed insight is newer than this (seconds) unless forced.
+INSIGHTS_MIN_REGEN_SECONDS = int(os.getenv("INSIGHTS_MIN_REGEN_SECONDS", "60"))
 
 SESSION_TTL_MINUTES = int(os.getenv("SESSION_TTL_MINUTES", "15"))
 

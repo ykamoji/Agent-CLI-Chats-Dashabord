@@ -126,6 +126,7 @@ def get_chats_summary():
         projection = {
             "_id": 0,
             "session_id": 1,
+            "cli_agent": 1,
             "completed At": 1,
             "completedAt": 1,
             "timestamp": 1
@@ -139,7 +140,12 @@ def get_chats_summary():
             ts = doc.get("completed At") or doc.get("completedAt") or doc.get("timestamp") or ""
 
             if sid not in session_groups:
-                session_groups[sid] = {"sessionId": sid, "latestTs": ts, "count": 1}
+                session_groups[sid] = {
+                    "sessionId": sid,
+                    "latestTs": ts,
+                    "count": 1,
+                    "agent": doc.get("cli_agent") or "",
+                }
             else:
                 session_groups[sid]["count"] += 1
                 if ts > session_groups[sid]["latestTs"]:
@@ -152,65 +158,17 @@ def get_chats_summary():
         }
         cache.set(cache_key, result, timeout=config.CHATS_CACHE_TTL)
 
-    return jsonify({**result, "session_map": _session_map(user_id)})
+    session_map = _session_map(user_id)
+    groups_dict = {}
+    for entry in session_map:
+        if isinstance(entry, dict) and entry.get("group") and entry["group"].get("name"):
+            gname = entry["group"]["name"]
+            groups_dict.setdefault(gname, []).append(entry.get("session_id"))
+            
+    groups_list = [{"name": k, "session_list": v} for k, v in groups_dict.items()]
 
+    return jsonify({**result, "session_map": session_map, "groups": groups_list})
 
-@bp.get("/api/chats/stats")
-def get_chats_stats():
-    force_refresh = request.args.get("refresh") in ("1", "true", "True")
-
-    user_id = None
-    if request.args.get("demo"):
-        viewer = users_collection().find_one({"role": "viewer"})
-        if viewer:
-            user_id = str(viewer.get("user_id") or viewer.get("_id"))
-    else:
-        token = extract_token()
-        session = get_active_session(token)
-        if session:
-            user_id = session["user_id"] or request.args.get("user_id")
-
-    if not user_id:
-        if not request.args.get("demo"):
-            return jsonify({"error": "invalid_or_expired_session"}), 401
-        return jsonify({"stats": {"total": 0, "toolCalls": 0, "distinctTools": 0}})
-
-    cache_key = f"chats_stats:{user_id}"
-    result = None
-    if not force_refresh:
-        result = cache.get(cache_key)
-
-    if result is None:
-        query = {"user_id": {"$in": id_variants(user_id)}}
-        projection = {
-            "_id": 1,
-            "Tools Used": 1
-        }
-        cursor = logs_collection().find(query, projection)
-        
-        total = 0
-        tool_calls = 0
-        distinct_tools = set()
-
-        for doc in cursor:
-            total += 1
-            tools = doc.get("Tools Used")
-            if isinstance(tools, list):
-                tool_calls += len(tools)
-                for t in tools:
-                    if isinstance(t, dict) and t.get("tool"):
-                        distinct_tools.add(t["tool"])
-
-        result = {
-            "stats": {
-                "total": total,
-                "toolCalls": tool_calls,
-                "distinctTools": len(distinct_tools)
-            }
-        }
-        cache.set(cache_key, result, timeout=config.CHATS_CACHE_TTL)
-
-    return jsonify(result)
 
 @bp.get("/api/chats/tool")
 def get_chats_tool():

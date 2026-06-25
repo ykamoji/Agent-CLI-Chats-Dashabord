@@ -24,10 +24,15 @@ export type Chat = {
   [key: string]: unknown;
 };
 
-// User-defined session metadata. A flexible list mixing:
-//   { session_id: "display name" }          — per-session names (string value)
-//   { Green: [...ids], Blue: [...ids] }      — color labels grouping sessions
-export type SessionMap = Record<string, string | string[]>[];
+// User-defined session metadata. Each entry maps a session to its display name
+// and color label.
+export type SessionMapEntry = {
+  session_id: string;
+  label?: string;
+  name?: string;
+  group?: { name: string };
+};
+export type SessionMap = SessionMapEntry[];
 
 export type ChatsResult = { chats: Chat[]; sessionMap: SessionMap };
 
@@ -35,30 +40,21 @@ export type SessionGroup = {
   sessionId: string;
   latestTs: string;
   count: number;
+  agent?: string;
 };
 
 export type ChatsSummaryResult = {
   sessions: SessionGroup[];
   sessionMap: SessionMap;
-};
-
-export type ChatsStatsResult = {
-  total: number;
-  toolCalls: number;
-  distinctTools: number;
+  groups?: { name: string; session_list: string[] }[];
 };
 
 export type SessionLabel = "None" | "Green" | "Blue";
-const LABEL_COLORS: SessionLabel[] = ["Green", "Blue"];
 
 /** Look up a session's display name from the session_map, or "" if untagged. */
 export function sessionName(map: SessionMap | undefined, sessionId: string): string {
   if (!map) return "";
-  for (const entry of map) {
-    const v = entry[sessionId];
-    if (typeof v === "string") return v || "";
-  }
-  return "";
+  return map.find((e) => e.session_id === sessionId)?.name || "";
 }
 
 /** Look up a session's color label, or "None" if unlabeled. */
@@ -67,13 +63,8 @@ export function sessionLabel(
   sessionId: string
 ): SessionLabel {
   if (!map) return "None";
-  for (const entry of map) {
-    for (const color of LABEL_COLORS) {
-      const ids = entry[color];
-      if (Array.isArray(ids) && ids.includes(sessionId)) return color;
-    }
-  }
-  return "None";
+  const label = map.find((e) => e.session_id === sessionId)?.label;
+  return (label === "Green" || label === "Blue") ? label : "None";
 }
 
 // --- session storage (token + 5-minute TTL, per requirements) ----------------
@@ -89,7 +80,7 @@ const USER_KEY = "cli-dashboard:user";
 const CHATS_CACHE_PREFIX = "cli-dashboard:chats:";
 const SUMMARY_CACHE_PREFIX = "cli-dashboard:summary:";
 const STATS_CACHE_PREFIX = "cli-dashboard:stats:";
-const CHATS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const CHATS_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 type CachedChats = { data: Chat[]; sessionMap: SessionMap; cachedAt: number };
 
@@ -361,7 +352,7 @@ function writeSummaryCache(scope: string, data: ChatsSummaryResult): void {
   if (typeof window === "undefined") return;
   try {
     sessionStorage.setItem(SUMMARY_CACHE_PREFIX + scope, JSON.stringify({ data, cachedAt: Date.now() }));
-  } catch {}
+  } catch { }
 }
 
 export async function getChatsSummary(options?: {
@@ -390,6 +381,7 @@ export async function getChatsSummary(options?: {
   const data = await request<{
     sessions: SessionGroup[];
     session_map?: SessionMap;
+    groups?: { name: string; session_list: string[] }[];
   }>(
     `/api/chats/summary${qs}`,
     { method: "GET" },
@@ -399,6 +391,7 @@ export async function getChatsSummary(options?: {
   const result: ChatsSummaryResult = {
     sessions: data.sessions ?? [],
     sessionMap: data.session_map ?? [],
+    groups: data.groups ?? [],
   };
   writeSummaryCache(scope, result);
   return result;
@@ -406,69 +399,6 @@ export async function getChatsSummary(options?: {
 
 export async function getDemoChatsSummary(forceRefresh = false): Promise<ChatsSummaryResult> {
   return getChatsSummary({ demo: true, forceRefresh });
-}
-
-function readStatsCache(scope: string): ChatsStatsResult | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = sessionStorage.getItem(STATS_CACHE_PREFIX + scope);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (Date.now() - parsed.cachedAt > CHATS_CACHE_TTL_MS) {
-      sessionStorage.removeItem(STATS_CACHE_PREFIX + scope);
-      return null;
-    }
-    return parsed.data;
-  } catch {
-    return null;
-  }
-}
-
-function writeStatsCache(scope: string, data: ChatsStatsResult): void {
-  if (typeof window === "undefined") return;
-  try {
-    sessionStorage.setItem(STATS_CACHE_PREFIX + scope, JSON.stringify({ data, cachedAt: Date.now() }));
-  } catch {}
-}
-
-export async function getChatsStats(options?: {
-  demo?: boolean;
-  forceRefresh?: boolean;
-}): Promise<ChatsStatsResult> {
-  const isDemo = options?.demo ?? false;
-  const forceRefresh = options?.forceRefresh ?? false;
-  const scope = isDemo ? "demo" : getStoredUser()?.user_id ?? "me";
-
-  if (!forceRefresh) {
-    const cached = readStatsCache(scope);
-    if (cached) return cached;
-  }
-
-  const params = new URLSearchParams();
-  if (isDemo) {
-    params.set("demo", "true");
-  } else {
-    const userId = getStoredUser()?.user_id;
-    if (userId) params.set("user_id", userId);
-  }
-  if (forceRefresh) params.set("refresh", "true");
-
-  const qs = params.toString() ? `?${params.toString()}` : "";
-  const data = await request<{
-    stats: ChatsStatsResult;
-  }>(
-    `/api/chats/stats${qs}`,
-    { method: "GET" },
-    !isDemo
-  );
-
-  const result = data.stats ?? { total: 0, toolCalls: 0, distinctTools: 0 };
-  writeStatsCache(scope, result);
-  return result;
-}
-
-export async function getDemoChatsStats(forceRefresh = false): Promise<ChatsStatsResult> {
-  return getChatsStats({ demo: true, forceRefresh });
 }
 
 /** DELETE /api/chats — bulk delete chat records. */
@@ -531,6 +461,145 @@ export function updateSessionLabel(
   demo = false
 ): Promise<SessionMap> {
   return postSessionUpdate({ session_id: sessionId, label }, demo);
+}
+
+/** Assign a group name to a list of session ids. */
+export function updateSessionGroup(
+  sessionIds: string[],
+  groupName: string,
+  demo = false
+): Promise<SessionMap> {
+  return postSessionUpdate({ session_ids: sessionIds, group: groupName }, demo);
+}
+
+// --- insights ----------------------------------------------------------------
+
+export type InsightsMetrics = {
+  total_turns: number;
+  total_sessions?: number;
+  tool_calls?: number;
+  distinct_tools?: number;
+  top_tools?: { tool: string; count: number }[];
+  empty_output_rate?: number;
+  tool_error_rate?: number;
+  retry_clusters?: number;
+  prompt_specificity_rate?: number;
+  vague_prompt_rate?: number;
+  avg_prompt_words?: number;
+  avg_tools_per_turn?: number;
+  agent_breakdown?: Record<string, number>;
+  session_shape?: {
+    conversations: number;
+    duration_seconds: number | null;
+    tools_per_turn: number;
+    error_turns: number;
+  };
+  anomalies?: string[];
+};
+
+export type InsightsDoc = {
+  scope: "global" | "session" | "group";
+  session_id: string | null;
+  group_name?: string | null;
+  status: "pending" | "complete" | "error";
+  timestamp: string;
+  logs_used_count: number;
+  insights: string[];
+  recommendations: string[];
+  anomalies: string[];
+  reasoning: string;
+  model: string;
+  error: string | null;
+};
+
+export type InsightsConfig = {
+  maxTurns: number;
+  inputTrunc: number;
+  model: string;
+};
+
+export type InsightsResponse = {
+  docs: InsightsDoc[];
+  metrics: InsightsMetrics;
+  modelAvailable: boolean;
+  config?: InsightsConfig;
+};
+
+const insightsCache = new Map<string, { data: InsightsResponse, chatCount?: number, timestamp: number }>();
+
+/** GET /api/insights — all stored insight rows (desc) + fresh deterministic metrics. */
+export async function getInsights(opts: {
+  scope: "global" | "session" | "group";
+  sessionId?: string;
+  groupName?: string;
+  sessionIds?: string[];
+  chatCount?: number;
+  forceRefresh?: boolean;
+  demo?: boolean;
+}): Promise<InsightsResponse> {
+  const { scope, sessionId, groupName, sessionIds, chatCount, forceRefresh, demo = false } = opts;
+  const cacheKey = JSON.stringify({ scope, sessionId, groupName, demo });
+
+  if (!forceRefresh) {
+    const cached = insightsCache.get(cacheKey);
+    if (cached) {
+      if (chatCount !== undefined && cached.chatCount === chatCount) {
+        return cached.data;
+      }
+      if (chatCount === undefined) {
+        return cached.data;
+      }
+    }
+  }
+
+  const params = new URLSearchParams();
+  params.set("scope", scope);
+  if (scope === "session" && sessionId) params.set("session_id", sessionId);
+  if (scope === "group") {
+    if (groupName) params.set("group_name", groupName);
+    if (sessionIds?.length) params.set("session_ids", sessionIds.join(","));
+  }
+  if (demo) {
+    params.set("demo", "true");
+  } else {
+    const uid = getStoredUser()?.user_id;
+    if (uid) params.set("user_id", uid);
+  }
+  if (chatCount !== undefined) {
+    params.set("_c", chatCount.toString());
+  } else {
+    params.set("_t", Date.now().toString());
+  }
+
+  const data = await request<InsightsResponse>(
+    `/api/insights?${params.toString()}`,
+    { method: "GET", cache: "no-store" },
+    !demo
+  );
+  insightsCache.set(cacheKey, { data, chatCount, timestamp: Date.now() });
+  return data;
+}
+
+/** POST /api/insights — kick off (async) Gemini generation. Auth only. */
+export async function generateInsights(opts: {
+  scope: "global" | "session" | "group";
+  sessionId?: string;
+  groupName?: string;
+  sessionIds?: string[];
+  force?: boolean;
+  config?: InsightsConfig;
+}): Promise<{ status: string }> {
+  const { scope, sessionId, groupName, sessionIds, force, config } = opts;
+  const uid = getStoredUser()?.user_id;
+  const qs = uid ? `?user_id=${encodeURIComponent(uid)}` : "";
+  return request<{ status: string }>(
+    `/api/insights${qs}`,
+    {
+      method: "POST",
+      body: JSON.stringify({ scope, session_id: sessionId, group_name: groupName, session_ids: sessionIds, force, config }),
+    },
+    true
+  );
 }
 
 /** GET /api/profile — the authenticated user's details. */
