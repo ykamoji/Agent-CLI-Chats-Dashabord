@@ -49,12 +49,6 @@ export type ChatsSummaryResult = {
   groups?: { name: string; session_list: string[] }[];
 };
 
-export type ChatsStatsResult = {
-  total: number;
-  toolCalls: number;
-  distinctTools: number;
-};
-
 export type SessionLabel = "None" | "Green" | "Blue";
 
 /** Look up a session's display name from the session_map, or "" if untagged. */
@@ -407,69 +401,6 @@ export async function getDemoChatsSummary(forceRefresh = false): Promise<ChatsSu
   return getChatsSummary({ demo: true, forceRefresh });
 }
 
-function readStatsCache(scope: string): ChatsStatsResult | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = sessionStorage.getItem(STATS_CACHE_PREFIX + scope);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (Date.now() - parsed.cachedAt > CHATS_CACHE_TTL_MS) {
-      sessionStorage.removeItem(STATS_CACHE_PREFIX + scope);
-      return null;
-    }
-    return parsed.data;
-  } catch {
-    return null;
-  }
-}
-
-function writeStatsCache(scope: string, data: ChatsStatsResult): void {
-  if (typeof window === "undefined") return;
-  try {
-    sessionStorage.setItem(STATS_CACHE_PREFIX + scope, JSON.stringify({ data, cachedAt: Date.now() }));
-  } catch { }
-}
-
-export async function getChatsStats(options?: {
-  demo?: boolean;
-  forceRefresh?: boolean;
-}): Promise<ChatsStatsResult> {
-  const isDemo = options?.demo ?? false;
-  const forceRefresh = options?.forceRefresh ?? false;
-  const scope = isDemo ? "demo" : getStoredUser()?.user_id ?? "me";
-
-  if (!forceRefresh) {
-    const cached = readStatsCache(scope);
-    if (cached) return cached;
-  }
-
-  const params = new URLSearchParams();
-  if (isDemo) {
-    params.set("demo", "true");
-  } else {
-    const userId = getStoredUser()?.user_id;
-    if (userId) params.set("user_id", userId);
-  }
-  if (forceRefresh) params.set("refresh", "true");
-
-  const qs = params.toString() ? `?${params.toString()}` : "";
-  const data = await request<{
-    stats: ChatsStatsResult;
-  }>(
-    `/api/chats/stats${qs}`,
-    { method: "GET" },
-    !isDemo
-  );
-
-  const result = data.stats ?? { total: 0, toolCalls: 0, distinctTools: 0 };
-  writeStatsCache(scope, result);
-  return result;
-}
-
-export async function getDemoChatsStats(forceRefresh = false): Promise<ChatsStatsResult> {
-  return getChatsStats({ demo: true, forceRefresh });
-}
-
 /** DELETE /api/chats — bulk delete chat records. */
 export async function deleteChats(records: Record<string, unknown>[], demo = false): Promise<void> {
   if (demo) throw new Error("Cannot delete in demo mode");
@@ -567,8 +498,9 @@ export type InsightsMetrics = {
 };
 
 export type InsightsDoc = {
-  scope: "global" | "session";
+  scope: "global" | "session" | "group";
   session_id: string | null;
+  group_name?: string | null;
   status: "pending" | "complete" | "error";
   timestamp: string;
   logs_used_count: number;
@@ -586,43 +518,77 @@ export type InsightsResponse = {
   modelAvailable: boolean;
 };
 
+const insightsCache = new Map<string, { data: InsightsResponse, chatCount?: number, timestamp: number }>();
+
 /** GET /api/insights — all stored insight rows (desc) + fresh deterministic metrics. */
 export async function getInsights(opts: {
-  scope: "global" | "session";
+  scope: "global" | "session" | "group";
   sessionId?: string;
+  groupName?: string;
+  sessionIds?: string[];
+  chatCount?: number;
+  forceRefresh?: boolean;
   demo?: boolean;
 }): Promise<InsightsResponse> {
-  const { scope, sessionId, demo = false } = opts;
+  const { scope, sessionId, groupName, sessionIds, chatCount, forceRefresh, demo = false } = opts;
+  const cacheKey = JSON.stringify({ scope, sessionId, groupName, demo });
+
+  if (!forceRefresh) {
+    const cached = insightsCache.get(cacheKey);
+    if (cached) {
+      if (chatCount !== undefined && cached.chatCount === chatCount) {
+        return cached.data;
+      }
+      if (chatCount === undefined) {
+        return cached.data;
+      }
+    }
+  }
+
   const params = new URLSearchParams();
   params.set("scope", scope);
   if (scope === "session" && sessionId) params.set("session_id", sessionId);
+  if (scope === "group") {
+    if (groupName) params.set("group_name", groupName);
+    if (sessionIds?.length) params.set("session_ids", sessionIds.join(","));
+  }
   if (demo) {
     params.set("demo", "true");
   } else {
     const uid = getStoredUser()?.user_id;
     if (uid) params.set("user_id", uid);
   }
-  return request<InsightsResponse>(
+  if (chatCount !== undefined) {
+    params.set("_c", chatCount.toString());
+  } else {
+    params.set("_t", Date.now().toString());
+  }
+
+  const data = await request<InsightsResponse>(
     `/api/insights?${params.toString()}`,
-    { method: "GET" },
+    { method: "GET", cache: "no-store" },
     !demo
   );
+  insightsCache.set(cacheKey, { data, chatCount, timestamp: Date.now() });
+  return data;
 }
 
 /** POST /api/insights — kick off (async) Gemini generation. Auth only. */
 export async function generateInsights(opts: {
-  scope: "global" | "session";
+  scope: "global" | "session" | "group";
   sessionId?: string;
+  groupName?: string;
+  sessionIds?: string[];
   force?: boolean;
 }): Promise<{ status: string }> {
-  const { scope, sessionId, force } = opts;
+  const { scope, sessionId, groupName, sessionIds, force } = opts;
   const uid = getStoredUser()?.user_id;
   const qs = uid ? `?user_id=${encodeURIComponent(uid)}` : "";
   return request<{ status: string }>(
     `/api/insights${qs}`,
     {
       method: "POST",
-      body: JSON.stringify({ scope, session_id: sessionId, force }),
+      body: JSON.stringify({ scope, session_id: sessionId, group_name: groupName, session_ids: sessionIds, force }),
     },
     true
   );
