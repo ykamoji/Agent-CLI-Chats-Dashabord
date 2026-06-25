@@ -29,7 +29,7 @@ services:
       - key: INSIGHTS_MAX_TURNS
         value: "1000"
       - key: INSIGHTS_INPUT_TRUNC
-        value: "100"
+        value: "1000"
       - key: INSIGHTS_MIN_REGEN_SECONDS
         value: "60"
       - key: SESSION_TTL_MINUTES
