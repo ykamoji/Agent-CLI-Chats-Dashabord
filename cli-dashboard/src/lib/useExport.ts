@@ -113,8 +113,8 @@ function buildCsv(
   rowNumber: Map<string, number>
 ): string {
   const hasName = cols.has("tool:name");
-  const hasArg  = cols.has("tool:argument");
-  const hasRes  = cols.has("tool:result");
+  const hasArg = cols.has("tool:argument");
+  const hasRes = cols.has("tool:result");
   const hasDetail = hasName || hasArg || hasRes;
 
   // Determine the maximum number of tool calls across all rows so we can
@@ -128,8 +128,8 @@ function buildCsv(
   if (cols.has("tool:count")) headers.push("Tool count");
   for (let i = 1; i <= maxTools; i++) {
     if (hasName) headers.push(`Tool ${i} name`);
-    if (hasArg)  headers.push(`Tool ${i} arguments`);
-    if (hasRes)  headers.push(`Tool ${i} result`);
+    if (hasArg) headers.push(`Tool ${i} arguments`);
+    if (hasRes) headers.push(`Tool ${i} result`);
   }
 
   const lines = ordered.map((r) => {
@@ -142,8 +142,8 @@ function buildCsv(
     for (let i = 0; i < maxTools; i++) {
       const t = tools[i];
       if (hasName) vals.push(t?.tool ?? "");
-      if (hasArg)  vals.push(t ? argToStr(t.arguments) : "");
-      if (hasRes)  vals.push(t?.result ?? "");
+      if (hasArg) vals.push(t ? argToStr(t.arguments) : "");
+      if (hasRes) vals.push(t?.result ?? "");
     }
     return vals.map(csvEscape).join(",");
   });
@@ -158,14 +158,14 @@ function buildMarkdown(
   toolsById: Map<string, ToolUse[]>,
   rowNumber: Map<string, number>
 ): string {
-  const hasName   = cols.has("tool:name");
-  const hasArg    = cols.has("tool:argument");
-  const hasRes    = cols.has("tool:result");
+  const hasName = cols.has("tool:name");
+  const hasArg = cols.has("tool:argument");
+  const hasRes = cols.has("tool:result");
   const hasDetail = hasName || hasArg || hasRes;
 
   const sections = ordered.map((r, idx) => {
     const num = rowNumber.get(r.id) ?? idx + 1;
-    const lines: string[] = [`## Turn #${num}`];
+    const lines: string[] = [`## Conversation #${num}`];
 
     // Scalar fields as bold key–value pairs.
     selectedCols.forEach((c) => {
@@ -266,7 +266,7 @@ export function useExport({
       return order === "asc" ? d : -d;
     });
 
-    // Only fetch per-turn tool details when name/argument/result are selected.
+    // Only fetch per-Conversation tool details when name/argument/result are selected.
     const toolsById = new Map<string, ToolUse[]>();
     if (needsToolDetail) {
       setExporting(true);

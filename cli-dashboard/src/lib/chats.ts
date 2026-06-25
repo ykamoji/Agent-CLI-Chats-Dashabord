@@ -56,7 +56,7 @@ export function fmtTime(ts: string): string {
 }
 
 // Best-effort un-escaping of a JSON-string fragment that can't be parsed
-// (commonly because the value was truncated upstream). Turns \" \\ \n \t etc.
+// (commonly because the value was truncated upstream). Conversations \" \\ \n \t etc.
 // into their real characters so the content is at least readable.
 function softUnescape(s: string): string {
   let out = "";

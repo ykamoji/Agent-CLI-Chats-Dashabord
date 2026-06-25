@@ -4,7 +4,7 @@ import { fmtTime } from "@/lib/chats";
 import AgentBadge from "@/components/AgentBadge";
 
 // A virtual "session" grouping card — shows only the session id and the
-// latest timestamp. Clicking it opens that session's full turn table.
+// latest timestamp. Clicking it opens that session's full Conversation table.
 export default function SessionCard({
   sessionId,
   latestTimestamp,
@@ -58,9 +58,8 @@ export default function SessionCard({
           {label !== "None" && (
             <span
               title={label}
-              className={`h-2.5 w-2.5 rounded-full ${
-                label === "Green" ? "bg-green-500" : "bg-blue-500"
-              }`}
+              className={`h-2.5 w-2.5 rounded-full ${label === "Green" ? "bg-green-500" : "bg-blue-500"
+                }`}
             />
           )}
           {!selectable && (
@@ -113,7 +112,7 @@ export default function SessionCard({
         {groupSessions ? (
           <div className="text-xs font-medium text-ink-muted">
             {groupSessions.length} {groupSessions.length === 1 ? "session" : "sessions"}
-            {count !== undefined && ` • ${count} turn${count !== 1 ? "s" : ""}`}
+            {count !== undefined && ` • ${count} Conversation${count !== 1 ? "s" : ""}`}
           </div>
         ) : (
           <div className="flex items-center gap-3 text-xs text-ink-muted">
@@ -137,7 +136,7 @@ export default function SessionCard({
                 <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
-                <span>{count} turn{count !== 1 ? "s" : ""}</span>
+                <span>{count} Conversation{count !== 1 ? "s" : ""}</span>
               </div>
             )}
           </div>

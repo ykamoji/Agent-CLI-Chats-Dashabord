@@ -12,21 +12,21 @@ import {
 // Scalar columns (one value per row). Tool data uses the "tool:" key prefix
 // below so that all selection state lives in a single `cols` Set.
 const EXPORT_COLUMNS: ExportCol[] = [
-  { key: "timestamp",  label: "Timestamp",   get: (r) => r.timestamp },
-  { key: "input",      label: "Input",       get: (r) => r.input },
-  { key: "output",     label: "Output",      get: (r) => r.output },
-  { key: "sessionId",  label: "Session ID",  get: (r) => r.sessionId },
-  { key: "agent",      label: "Agent",       get: (r) => r.agent },
+  { key: "timestamp", label: "Timestamp", get: (r) => r.timestamp },
+  { key: "input", label: "Input", get: (r) => r.input },
+  { key: "output", label: "Output", get: (r) => r.output },
+  { key: "sessionId", label: "Session ID", get: (r) => r.sessionId },
+  { key: "agent", label: "Agent", get: (r) => r.agent },
   { key: "entryIndex", label: "Entry index", get: (r) => r.entryIndex },
 ];
 
 // Tool sub-fields. Keys are prefixed with "tool:" to avoid clashing with
 // scalar column keys while sharing the same Set.
 const TOOL_FIELDS: { key: string; label: string }[] = [
-  { key: "tool:count",    label: "Count"     },
-  { key: "tool:name",     label: "Tool name" },
-  { key: "tool:argument", label: "Argument"  },
-  { key: "tool:result",   label: "Result"    },
+  { key: "tool:count", label: "Count" },
+  { key: "tool:name", label: "Tool name" },
+  { key: "tool:argument", label: "Argument" },
+  { key: "tool:result", label: "Result" },
 ];
 
 const DEFAULT_COLS = new Set(["timestamp", "input", "output", "agent", "tool:count"]);
@@ -51,11 +51,11 @@ export default function ExportPanel({
   isDemo?: boolean;
 }) {
   const [format, setFormat] = useState<ExportFormat>("csv");
-  const [order, setOrder]   = useState<SortDir>("desc");
+  const [order, setOrder] = useState<SortDir>("desc");
   // Single Set for all column selections – scalar cols by key, tool fields by "tool:*".
   const [cols, setCols] = useState<Set<string>>(() => new Set(DEFAULT_COLS));
 
-  const count        = rows.length;
+  const count = rows.length;
   const toolsEnabled = [...cols].some((k) => TOOL_KEYS.has(k));
   const selectedCols = EXPORT_COLUMNS.filter((c) => cols.has(c.key));
   const hasSelection = selectedCols.length > 0 || toolsEnabled;
@@ -106,9 +106,8 @@ export default function ExportPanel({
       )}
       <aside
         aria-hidden={!open}
-        className={`fixed right-0 top-0 z-50 flex h-screen w-full max-w-md flex-col border-l border-ink/15 bg-paper shadow-material transition-transform duration-300 ease-out ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`fixed right-0 top-0 z-50 flex h-screen w-full max-w-md flex-col border-l border-ink/15 bg-paper shadow-material transition-transform duration-300 ease-out ${open ? "translate-x-0" : "translate-x-full"
+          }`}
       >
         <div className="flex items-center justify-between border-b border-ink/10 bg-white px-5 py-4">
           <div>
@@ -180,7 +179,7 @@ export default function ExportPanel({
                 ))}
                 {needsToolDetail && (
                   <p className="px-2 pt-1 text-[10px] text-ink-muted">
-                    Tool name / argument / result are fetched per turn on export.
+                    Tool name / argument / result are fetched per conversation on export.
                   </p>
                 )}
               </div>
@@ -197,11 +196,10 @@ export default function ExportPanel({
                 key={f}
                 type="button"
                 onClick={() => setFormat(f)}
-                className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                  format === f
+                className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${format === f
                     ? "border-ink bg-ink text-paper"
                     : "border-ink/15 bg-white text-ink hover:bg-paper-soft"
-                }`}
+                  }`}
               >
                 .{f === "markdown" ? "md" : f}
               </button>
@@ -216,18 +214,17 @@ export default function ExportPanel({
             {(
               [
                 { v: "desc" as SortDir, label: "Newest first" },
-                { v: "asc"  as SortDir, label: "Oldest first" },
+                { v: "asc" as SortDir, label: "Oldest first" },
               ]
             ).map((o) => (
               <button
                 key={o.v}
                 type="button"
                 onClick={() => setOrder(o.v)}
-                className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                  order === o.v
+                className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${order === o.v
                     ? "border-ink bg-ink text-paper"
                     : "border-ink/15 bg-white text-ink hover:bg-paper-soft"
-                }`}
+                  }`}
               >
                 {o.label}
               </button>

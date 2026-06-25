@@ -218,17 +218,17 @@ function DashboardContent() {
           {isDemo ? `${demoUser}'s conversation history` : "Conversation history"}
         </h1>
         <p className="mt-1 text-sm text-ink-muted">
-          Grouped by session. Select a session to see its turns.
+          Grouped by session. Select a session to see its Conversations.
         </p>
 
         {/* Latest Insights */}
         {!busy && (
           <div className="mt-8">
-            <Insights 
-              scope="global" 
-              isDemo={isDemo} 
-              mode="latest" 
-              chatCount={sessions.reduce((acc, s) => acc + s.count, 0)} 
+            <Insights
+              scope="global"
+              isDemo={isDemo}
+              mode="latest"
+              chatCount={sessions.reduce((acc, s) => acc + s.count, 0)}
             />
           </div>
         )}

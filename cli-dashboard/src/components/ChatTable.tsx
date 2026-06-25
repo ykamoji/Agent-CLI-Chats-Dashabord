@@ -16,7 +16,7 @@ export default function ChatTable({
   loading,
   error,
   hideSession = false,
-  title = "Recent turns",
+  title = "Recent Conversations",
   onRefresh,
   refreshing = false,
   selectedId = null,
@@ -124,232 +124,232 @@ export default function ChatTable({
 
   return (
     <>
-    <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-material">
-      <div className="flex items-center justify-between border-b border-ink/10 px-5 py-4">
-        <h2 className="font-display text-lg font-bold">{title}</h2>
-        <div className="flex items-center gap-3">
-          {selectionEnabled && selectedRowIds.size > 0 && onDelete && (
+      <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-material">
+        <div className="flex items-center justify-between border-b border-ink/10 px-5 py-4">
+          <h2 className="font-display text-lg font-bold">{title}</h2>
+          <div className="flex items-center gap-3">
+            {selectionEnabled && selectedRowIds.size > 0 && onDelete && (
+              <button
+                type="button"
+                onClick={async () => {
+                  setDeleting(true);
+                  const toDelete = rows.filter(r => selectedRowIds.has(r.id)).map(r => r.raw);
+                  try {
+                    await onDelete(toDelete);
+                    setSelectedRowIds(new Set());
+                    setSelectionEnabled(false);
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+                disabled={deleting}
+                className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-1.5 text-xs font-medium text-red-600 shadow-material transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <svg className={`h-3.5 w-3.5 ${deleting ? "animate-pulse" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 6h18" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                  <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+                {deleting ? "Deleting…" : "Delete"}
+              </button>
+            )}
             <button
               type="button"
-              onClick={async () => {
-                setDeleting(true);
-                const toDelete = rows.filter(r => selectedRowIds.has(r.id)).map(r => r.raw);
-                try {
-                  await onDelete(toDelete);
-                  setSelectedRowIds(new Set());
-                  setSelectionEnabled(false);
-                } finally {
-                  setDeleting(false);
-                }
+              onClick={() => {
+                setSelectionEnabled(!selectionEnabled);
+                setSelectedRowIds(new Set());
               }}
-              disabled={deleting}
-              className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-1.5 text-xs font-medium text-red-600 shadow-material transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <svg className={`h-3.5 w-3.5 ${deleting ? "animate-pulse" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 6h18" />
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
-              {deleting ? "Deleting…" : "Delete"}
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              setSelectionEnabled(!selectionEnabled);
-              setSelectedRowIds(new Set());
-            }}
-            disabled={loading || deleting}
-            className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {selectionEnabled ? "Cancel Selection" : "Select"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setExportOpen(true)}
-            disabled={loading || deleting || rows.length === 0}
-            className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 3v12" />
-              <path d="m7 10 5 5 5-5" />
-              <path d="M5 21h14" />
-            </svg>
-            Export
-          </button>
-          {onRefresh && (
-            <button
-              type="button"
-              onClick={onRefresh}
-              disabled={loading || refreshing || deleting}
+              disabled={loading || deleting}
               className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <svg
-                className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-                <path d="M21 3v6h-6" />
-              </svg>
-              {refreshing ? "Syncing…" : "Sync"}
+              {selectionEnabled ? "Cancel Selection" : "Select"}
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => setExportOpen(true)}
+              disabled={loading || deleting || rows.length === 0}
+              className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3v12" />
+                <path d="m7 10 5 5 5-5" />
+                <path d="M5 21h14" />
+              </svg>
+              Export
+            </button>
+            {onRefresh && (
+              <button
+                type="button"
+                onClick={onRefresh}
+                disabled={loading || refreshing || deleting}
+                className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <svg
+                  className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                  <path d="M21 3v6h-6" />
+                </svg>
+                {refreshing ? "Syncing…" : "Sync"}
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-ink/10 text-xs uppercase tracking-wide text-ink-muted">
+                {selectionEnabled && (
+                  <th className="px-5 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={sorted.length > 0 && selectedRowIds.size === sorted.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedRowIds(new Set(sorted.map(r => r.id)));
+                        } else {
+                          setSelectedRowIds(new Set());
+                        }
+                      }}
+                      className="rounded border-ink/30 text-ink focus:ring-ink"
+                    />
+                  </th>
+                )}
+                <th className="px-5 py-3 font-medium">#</th>
+                <SortHeader label="Timestamp" k="timestamp" />
+                <SortHeader label="Input" k="input" />
+                <SortHeader label="Output" k="output" />
+                <SortHeader label="Tools Used" k="tools" />
+                {!hideSession && <SortHeader label="Session" k="sessionId" />}
+                {!hideSession && <SortHeader label="Agent" k="agent" />}
+              </tr>
+            </thead>
+            <tbody>
+              {loading && (
+                <tr>
+                  <td colSpan={effectiveColSpan} className="px-5 py-10 text-center text-ink-muted">
+                    Loading…
+                  </td>
+                </tr>
+              )}
+              {!loading && error && (
+                <tr>
+                  <td colSpan={effectiveColSpan} className="px-5 py-10 text-center text-red-600">
+                    {error}
+                  </td>
+                </tr>
+              )}
+              {!loading && !error && sorted.length === 0 && (
+                <tr>
+                  <td colSpan={effectiveColSpan} className="px-5 py-10 text-center text-ink-muted">
+                    No chat logs yet.
+                  </td>
+                </tr>
+              )}
+              {!loading &&
+                !error &&
+                sorted.map((r, index) => {
+                  const selected = selectedId === r.id;
+                  const isChecked = selectedRowIds.has(r.id);
+                  return (
+                    <tr
+                      key={r.id}
+                      onClick={() => onRowClick?.(r, rowNumber.get(r.id) ?? 0)}
+                      aria-selected={selected}
+                      className={`border-b border-ink/5 align-top transition-colors ${onRowClick ? "cursor-pointer" : ""
+                        } ${selected
+                          ? "bg-ink/5 ring-1 ring-inset ring-ink/20"
+                          : isChecked
+                            ? "bg-ink/5"
+                            : "hover:bg-paper-soft"
+                        }`}
+                    >
+                      {selectionEnabled && (
+                        <td className="px-5 py-4 w-10" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const next = new Set(selectedRowIds);
+                              if (e.target.checked) {
+                                next.add(r.id);
+                              } else {
+                                next.delete(r.id);
+                              }
+                              setSelectedRowIds(next);
+                            }}
+                            className="rounded border-ink/30 text-ink focus:ring-ink"
+                          />
+                        </td>
+                      )}
+                      <td className="whitespace-nowrap px-5 py-4 font-mono text-xs text-ink-muted">
+                        {index + 1}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-4 font-mono text-xs text-ink-muted">
+                        <span title={r.timestamp}>{fmtTime(r.timestamp)}</span>
+                      </td>
+                      <td className="max-w-sm px-5 py-4">
+                        <span className="line-clamp-2 font-medium" title={r.input}>
+                          {r.input || "—"}
+                        </span>
+                      </td>
+                      <td className="max-w-sm px-5 py-4">
+                        {r.output ? (
+                          <span className="line-clamp-2 text-ink-muted" title={r.output}>
+                            {r.output}
+                          </span>
+                        ) : (
+                          <span className="text-ink-muted">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-4">
+                        {r.toolCount === 0 ? (
+                          <span className="text-ink-muted">—</span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-md bg-paper-soft px-2 py-1 text-xs font-medium">
+                            <span className="font-mono">{r.toolCount}</span>
+                            tool{r.toolCount > 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </td>
+                      {!hideSession && (
+                        <td className="px-5 py-4">
+                          <span
+                            className="font-mono text-xs text-ink-muted"
+                            title={r.sessionId}
+                          >
+                            {r.sessionId ? `${r.sessionId.slice(0, 8)}…` : "—"}
+                          </span>
+                        </td>
+                      )}
+                      {!hideSession && (
+                        <td className="px-5 py-4">
+                          <AgentBadge agent={r.agent} />
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-ink/10 text-xs uppercase tracking-wide text-ink-muted">
-              {selectionEnabled && (
-                <th className="px-5 py-3 w-10">
-                  <input
-                    type="checkbox"
-                    checked={sorted.length > 0 && selectedRowIds.size === sorted.length}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedRowIds(new Set(sorted.map(r => r.id)));
-                      } else {
-                        setSelectedRowIds(new Set());
-                      }
-                    }}
-                    className="rounded border-ink/30 text-ink focus:ring-ink"
-                  />
-                </th>
-              )}
-              <th className="px-5 py-3 font-medium">#</th>
-              <SortHeader label="Timestamp" k="timestamp" />
-              <SortHeader label="Input" k="input" />
-              <SortHeader label="Output" k="output" />
-              <SortHeader label="Tools Used" k="tools" />
-              {!hideSession && <SortHeader label="Session" k="sessionId" />}
-              {!hideSession && <SortHeader label="Agent" k="agent" />}
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={effectiveColSpan} className="px-5 py-10 text-center text-ink-muted">
-                  Loading…
-                </td>
-              </tr>
-            )}
-            {!loading && error && (
-              <tr>
-                <td colSpan={effectiveColSpan} className="px-5 py-10 text-center text-red-600">
-                  {error}
-                </td>
-              </tr>
-            )}
-            {!loading && !error && sorted.length === 0 && (
-              <tr>
-                <td colSpan={effectiveColSpan} className="px-5 py-10 text-center text-ink-muted">
-                  No chat logs yet.
-                </td>
-              </tr>
-            )}
-            {!loading &&
-              !error &&
-              sorted.map((r, index) => {
-                const selected = selectedId === r.id;
-                const isChecked = selectedRowIds.has(r.id);
-                return (
-                  <tr
-                    key={r.id}
-                    onClick={() => onRowClick?.(r, rowNumber.get(r.id) ?? 0)}
-                    aria-selected={selected}
-                    className={`border-b border-ink/5 align-top transition-colors ${onRowClick ? "cursor-pointer" : ""
-                      } ${selected
-                        ? "bg-ink/5 ring-1 ring-inset ring-ink/20"
-                        : isChecked
-                          ? "bg-ink/5"
-                          : "hover:bg-paper-soft"
-                      }`}
-                  >
-                    {selectionEnabled && (
-                      <td className="px-5 py-4 w-10" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => {
-                            const next = new Set(selectedRowIds);
-                            if (e.target.checked) {
-                              next.add(r.id);
-                            } else {
-                              next.delete(r.id);
-                            }
-                            setSelectedRowIds(next);
-                          }}
-                          className="rounded border-ink/30 text-ink focus:ring-ink"
-                        />
-                      </td>
-                    )}
-                    <td className="whitespace-nowrap px-5 py-4 font-mono text-xs text-ink-muted">
-                      {index + 1}
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-4 font-mono text-xs text-ink-muted">
-                      <span title={r.timestamp}>{fmtTime(r.timestamp)}</span>
-                    </td>
-                    <td className="max-w-sm px-5 py-4">
-                      <span className="line-clamp-2 font-medium" title={r.input}>
-                        {r.input || "—"}
-                      </span>
-                    </td>
-                    <td className="max-w-sm px-5 py-4">
-                      {r.output ? (
-                        <span className="line-clamp-2 text-ink-muted" title={r.output}>
-                          {r.output}
-                        </span>
-                      ) : (
-                        <span className="text-ink-muted">—</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-4">
-                      {r.toolCount === 0 ? (
-                        <span className="text-ink-muted">—</span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 rounded-md bg-paper-soft px-2 py-1 text-xs font-medium">
-                          <span className="font-mono">{r.toolCount}</span>
-                          tool{r.toolCount > 1 ? "s" : ""}
-                        </span>
-                      )}
-                    </td>
-                    {!hideSession && (
-                      <td className="px-5 py-4">
-                        <span
-                          className="font-mono text-xs text-ink-muted"
-                          title={r.sessionId}
-                        >
-                          {r.sessionId ? `${r.sessionId.slice(0, 8)}…` : "—"}
-                        </span>
-                      </td>
-                    )}
-                    {!hideSession && (
-                      <td className="px-5 py-4">
-                        <AgentBadge agent={r.agent} />
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-          </tbody>
-        </table>
-      </div>
-    </div>
 
-    {/* Export config slide-over */}
-    <ExportPanel
-      open={exportOpen}
-      onClose={() => setExportOpen(false)}
-      rows={exportRows}
-      rowNumber={rowNumber}
-      exportingSelected={exportingSelected}
-      isDemo={isDemo}
-    />
+      {/* Export config slide-over */}
+      <ExportPanel
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        rows={exportRows}
+        rowNumber={rowNumber}
+        exportingSelected={exportingSelected}
+        isDemo={isDemo}
+      />
     </>
   );
 }

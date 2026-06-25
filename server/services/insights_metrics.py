@@ -168,7 +168,7 @@ def compute_metrics(user_id: str, session_ids: list[str] | str | None = None) ->
                 duration = None
         error_turns = sum(1 for d in items if not _norm(d.get("Output")))
         metrics["session_shape"] = {
-            "turns": len(items),
+            "conversations": len(items),
             "duration_seconds": duration,
             "tools_per_turn": round(tool_calls / len(items), 2) if items else 0,
             "error_turns": error_turns,
@@ -183,11 +183,11 @@ def compute_metrics(user_id: str, session_ids: list[str] | str | None = None) ->
             for sid, items in by_session.items():
                 if len(items) > fence:
                     anomalies.append(
-                        f"Session {sid[:8]}… is unusually long ({len(items)} turns)."
+                        f"Session {sid[:8]}… is unusually long ({len(items)} Conversations)."
                     )
     if metrics["empty_output_rate"] >= 20:
         anomalies.append(
-            f"{metrics['empty_output_rate']}% of turns produced no output (possible errors)."
+            f"{metrics['empty_output_rate']}% of Conversations produced no output (possible errors)."
         )
     if metrics["tool_error_rate"] >= 15:
         anomalies.append(

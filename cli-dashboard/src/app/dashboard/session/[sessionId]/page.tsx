@@ -40,12 +40,11 @@ function SessionContent() {
 
   const groupName = sessionMap.find((e) => e.session_id === sessionId)?.group?.name;
   const sName = sessionMap.find((e) => e.session_id === sessionId)?.name || sessionId;
-  
+
   const dashboardHref = `/dashboard${isDemo ? `?demo=${encodeURIComponent(demoUser as string)}` : ""}`;
   const groupHref = groupName
-    ? `/dashboard/group/${encodeURIComponent(groupName)}${
-        isDemo ? `?demo=${encodeURIComponent(demoUser as string)}` : ""
-      }`
+    ? `/dashboard/group/${encodeURIComponent(groupName)}${isDemo ? `?demo=${encodeURIComponent(demoUser as string)}` : ""
+    }`
     : undefined;
 
   const backHref = groupName
@@ -93,9 +92,8 @@ function SessionContent() {
       </header>
 
       <div
-        className={`px-6 py-10 transition-[margin] duration-300 ease-out ${
-          panel.open ? "lg:mr-[50vw]" : ""
-        }`}
+        className={`px-6 py-10 transition-[margin] duration-300 ease-out ${panel.open ? "lg:mr-[50vw]" : ""
+          }`}
       >
         {/* Back + insights */}
         <div className="flex items-center gap-3 mb-6">
@@ -125,14 +123,14 @@ function SessionContent() {
           </div>
         )}
 
-        {/* Turns table (session column removed) */}
+        {/* Conversations table (session column removed) */}
         <div className="mt-6">
           <ChatTable
             chats={chats}
             loading={loading}
             error={error}
             hideSession
-            title="Turns"
+            title="Conversations"
             isDemo={isDemo}
             onRefresh={reload}
             refreshing={refreshing}

@@ -489,7 +489,7 @@ export type InsightsMetrics = {
   avg_tools_per_turn?: number;
   agent_breakdown?: Record<string, number>;
   session_shape?: {
-    turns: number;
+    conversations: number;
     duration_seconds: number | null;
     tools_per_turn: number;
     error_turns: number;

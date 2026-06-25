@@ -40,7 +40,7 @@ def _get_client():
 
 
 def _build_digest(user_id: str, session_ids: list[str] | str | None, max_turns: int, input_trunc: int) -> list[dict]:
-    """Compact, token-bounded per-turn digest (most recent turns first)."""
+    """Compact, token-bounded per-Conversation digest (most recent Conversations first)."""
     query = {"user_id": {"$in": id_variants(user_id)}}
     if session_ids:
         if isinstance(session_ids, list):
@@ -91,7 +91,7 @@ def _prompt(scope: str, metrics: dict, digest: list[dict]) -> str:
     # 1. Give the model a specific analytical lens based on the scope
     if scope == "session":
         target = "a single coding session"
-        lens = "Focus on micro-interactions, immediate prompt missteps, and turn-by-turn friction."
+        lens = "Focus on micro-interactions, immediate prompt missteps, and conversation-by-conversation friction."
     elif scope == "group":
         target = "a specific group of coding sessions"
         lens = "Focus on macro-trends across this specific group, recurring bad habits, and overarching tool usage patterns."

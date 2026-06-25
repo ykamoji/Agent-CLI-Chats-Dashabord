@@ -169,8 +169,8 @@ export default function SessionGroupModal({
             type="button"
             onClick={() => setTab("groups")}
             className={`flex-1 px-6 py-3 text-sm font-medium transition-colors ${tab === "groups"
-                ? "border-b-2 border-ink text-ink"
-                : "text-ink-muted hover:text-ink"
+              ? "border-b-2 border-ink text-ink"
+              : "text-ink-muted hover:text-ink"
               }`}
           >
             Groups{groups.length > 0 && ` (${groups.length})`}
@@ -179,8 +179,8 @@ export default function SessionGroupModal({
             type="button"
             onClick={() => setTab("assign")}
             className={`flex-1 px-6 py-3 text-sm font-medium transition-colors ${tab === "assign"
-                ? "border-b-2 border-ink text-ink"
-                : "text-ink-muted hover:text-ink"
+              ? "border-b-2 border-ink text-ink"
+              : "text-ink-muted hover:text-ink"
               }`}
           >
             Assign Sessions
@@ -407,7 +407,7 @@ export default function SessionGroupModal({
                             <div className="flex min-w-0 flex-1 flex-col">
                               <span className="truncate font-medium">{sname || s.sessionId}</span>
                               <span className="text-xs text-ink-muted">
-                                {s.count} turn{s.count !== 1 ? "s" : ""} · Last active {fmtTime(s.latestTs)}
+                                {s.count} Conversation{s.count !== 1 ? "s" : ""} · Last active {fmtTime(s.latestTs)}
                               </span>
                             </div>
                           </label>

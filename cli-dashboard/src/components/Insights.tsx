@@ -35,16 +35,16 @@ function DeterministicPanel({ m }: { m: InsightsMetrics }) {
   }
   const pct = (v?: number) => (v == null ? "—" : `${v}%`);
   const cards: { label: string; value: string }[] = [
-    { label: "Turns", value: String(m.total_turns) },
+    { label: "Conversations", value: String(m.total_turns) },
     m.session_shape
-      ? { label: "Tools / turn", value: String(m.session_shape.tools_per_turn) }
+      ? { label: "Tools / Conversation", value: String(m.session_shape.tools_per_turn) }
       : { label: "Sessions", value: String(m.total_sessions ?? 0) },
     { label: "Tool calls", value: String(m.tool_calls ?? 0) },
     { label: "Tool error rate", value: pct(m.tool_error_rate) },
     { label: "Empty output", value: pct(m.empty_output_rate) },
     { label: "Specific prompts", value: pct(m.prompt_specificity_rate) },
     { label: "Vague prompts", value: pct(m.vague_prompt_rate) },
-    { label: "Avg tools / turn", value: String(m.avg_tools_per_turn ?? 0) },
+    { label: "Avg tools / Conversation", value: String(m.avg_tools_per_turn ?? 0) },
   ];
 
   return (
@@ -300,7 +300,7 @@ export default function Insights({
                             <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-muted">Generation Settings</h4>
                             <div className="space-y-3">
                               <div>
-                                <label className="mb-1 block text-xs text-ink/70">Max Turns Analyzed</label>
+                                <label className="mb-1 block text-xs text-ink/70">Max Conversations Analyzed</label>
                                 <input
                                   type="number"
                                   value={customConfig.maxTurns}

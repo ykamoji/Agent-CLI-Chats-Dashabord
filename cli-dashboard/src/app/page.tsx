@@ -49,7 +49,7 @@ export default function LandingPage() {
           {[
             {
               k: "01",
-              t: "Every turn, captured",
+              t: "Every conversation, captured",
               d: "Inputs, tool calls, and outputs from each session in one timeline.",
             },
             {

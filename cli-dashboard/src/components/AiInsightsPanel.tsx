@@ -118,7 +118,7 @@ export default function AiInsightsPanel({
               {doc.reasoning}
             </p>
             <p className="text-[12px] pt-2 text-paper/80">
-              {doc.logs_used_count} turns analyzed ·{" "}
+              {doc.logs_used_count} Conversations analyzed ·{" "}
               {new Date(doc.timestamp).toLocaleString()}
             </p>
           </>

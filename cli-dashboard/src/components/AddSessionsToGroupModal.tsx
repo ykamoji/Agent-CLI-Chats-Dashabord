@@ -81,7 +81,7 @@ export default function AddSessionsToGroupModal({
                           <div className="flex flex-col">
                             <span className="font-medium">{sname || s.sessionId}</span>
                             <span className="text-xs text-ink-muted">
-                              {s.count} turns • Last active {fmtTime(s.latestTs)}
+                              {s.count} Conversations • Last active {fmtTime(s.latestTs)}
                             </span>
                           </div>
                         </label>

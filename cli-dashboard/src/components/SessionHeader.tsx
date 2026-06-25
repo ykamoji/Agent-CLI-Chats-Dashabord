@@ -160,7 +160,7 @@ export default function SessionHeader({
       {showTurns && (
         <div className="mt-2 flex items-center gap-3">
           <p className="text-xs text-ink-muted">
-            {turnsCount} turn{turnsCount !== 1 ? "s" : ""}
+            {turnsCount} Conversation{turnsCount !== 1 ? "s" : ""}
           </p>
         </div>
       )}
