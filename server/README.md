@@ -25,14 +25,16 @@ with a **5-minute** expiry (configurable via `SESSION_TTL_MINUTES`). A MongoDB
 TTL index auto-removes expired sessions. The UI stores the token in
 `sessionStorage` and sends it as `Authorization: Bearer <token>`.
 
+If a user has `role: "viewer"`, the password verification is skipped during authentication, enabling password-less demo access.
+
 ## Endpoints
 
 | Method | Route | Auth | Description |
 | ------ | ----- | ---- | ----------- |
-| `POST` | `/api/authenticate` | — | Body `{username, password}` → `{token, expires_at, ttl_seconds, user}` |
+| `POST` | `/api/authenticate` | — | Body `{username, password, signup?, email?}` → `{token, expires_at, ttl_seconds, user}`. If `signup=true`, creates a new account. |
 | `GET` | `/api/session` | Bearer | `{active: true, user_id, expires_at}` or `401` |
 | `DELETE` | `/api/session` | Bearer | Revoke token (logout) |
-| `GET` | `/api/chats` | Bearer | The user's logs from the `logs` collection (by `user_id`) |
+| `GET` | `/api/chats` | Bearer / — | The user's logs from the `logs` collection. Uses session `user_id` or `?user_id=...` fallback. `?demo=true` skips auth and fetches data for the first `viewer` user. |
 | `GET` | `/api/profile` | Bearer | Current user's `{user_id, username, email}` |
 | `PUT` | `/api/profile/password` | Bearer | Body `{new_password, confirm_password}` → updates password |
 | `GET` | `/api/health` | — | Liveness check |
@@ -42,8 +44,8 @@ pre-existing seed data; updates are always written as hashes.
 
 ## Expected collections (`vibe_coding`)
 
-- **users** — `{ _id | user_id, username | name, email, password }`
-- **logs** — `{ user_id, input, tool, output, ... }`
+- **users** — `{ _id | user_id, username | name, email, password, role }`
+- **logs** — `{ user_id, input, tool, output, status, ... }`
 - **sessions** — managed by the server (created automatically).
 
 `user_id` is matched whether stored as a string or an `ObjectId`.
