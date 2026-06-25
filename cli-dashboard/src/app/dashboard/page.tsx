@@ -3,12 +3,12 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import UserMenu from "@/components/UserMenu";
-import SessionCard from "@/components/SessionCard";
-import SessionCardSkeleton from "@/components/SessionCardSkeleton";
-import SessionGroupModal from "@/components/SessionGroupModal";
-import WeekSection from "@/components/WeekSection";
-import Insights from "@/components/Insights";
+import UserMenu from "@/components/common/layout/UserMenu";
+import SessionCard from "@/components/common/cards/SessionCard";
+import SessionCardSkeleton from "@/components/common/cards/SessionCardSkeleton";
+import SessionGroupModal from "@/components/dashboard/SessionGroupModal";
+import WeekSection from "@/components/common/layout/WeekSection";
+import Insights from "@/components/common/insights/Insights";
 import {
   ApiError,
   getChatsSummary,

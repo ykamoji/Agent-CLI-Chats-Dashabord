@@ -8,7 +8,7 @@ import {
   type SessionMap,
 } from "@/lib/api";
 import { fmtTime } from "@/lib/chats";
-import GroupSelect from "@/components/GroupSelect";
+import GroupSelect from "@/components/dashboard/GroupSelect";
 
 type Tab = "groups" | "assign";
 

@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import AgentBadge from "@/components/AgentBadge";
-import LabelSelect from "@/components/LabelSelect";
+import AgentBadge from "@/components/common/ui/AgentBadge";
+import LabelSelect from "@/components/session/header/LabelSelect";
 import {
   sessionLabel,
   sessionName,

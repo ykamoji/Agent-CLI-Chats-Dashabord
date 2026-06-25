@@ -3,11 +3,11 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import UserMenu from "@/components/UserMenu";
-import SessionCard from "@/components/SessionCard";
-import SessionCardSkeleton from "@/components/SessionCardSkeleton";
-import WeekSection from "@/components/WeekSection";
-import Insights from "@/components/Insights";
+import UserMenu from "@/components/common/layout/UserMenu";
+import SessionCard from "@/components/common/cards/SessionCard";
+import SessionCardSkeleton from "@/components/common/cards/SessionCardSkeleton";
+import WeekSection from "@/components/common/layout/WeekSection";
+import Insights from "@/components/common/insights/Insights";
 import {
   ApiError,
   getChatsSummary,
@@ -19,8 +19,8 @@ import {
   type SessionGroup,
   type SessionMap,
 } from "@/lib/api";
-import GroupSessionHeader from "@/components/GroupSessionHeader";
-import AddSessionsToGroupModal from "@/components/AddSessionsToGroupModal";
+import GroupSessionHeader from "@/components/group/GroupSessionHeader";
+import AddSessionsToGroupModal from "@/components/group/AddSessionsToGroupModal";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 

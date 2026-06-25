@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { type SessionLabel } from "@/lib/api";
 import { fmtTime } from "@/lib/chats";
-import AgentBadge from "@/components/AgentBadge";
+import AgentBadge from "@/components/common/ui/AgentBadge";
 
 // A virtual "session" grouping card — shows only the session id and the
 // latest timestamp. Clicking it opens that session's full Conversation table.

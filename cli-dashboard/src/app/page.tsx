@@ -1,6 +1,6 @@
 import Link from "next/link";
-import LandingNav from "@/components/LandingNav";
-import LandingHeroActions from "@/components/LandingHeroActions";
+import LandingNav from "@/components/landing/LandingNav";
+import LandingHeroActions from "@/components/landing/LandingHeroActions";
 
 export default function LandingPage() {
   return (

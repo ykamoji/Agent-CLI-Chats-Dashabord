@@ -1,6 +1,6 @@
 "use client";
 
-import TurnDetail from "@/components/TurnDetail";
+import TurnDetail from "@/components/session/detail/TurnDetail";
 import { fmtTime, type Row } from "@/lib/chats";
 
 // Slide-over panel anchored to the right edge. It slides in (leftward) when a

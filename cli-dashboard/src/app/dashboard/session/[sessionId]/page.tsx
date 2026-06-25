@@ -3,11 +3,11 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import UserMenu from "@/components/UserMenu";
-import ChatTable from "@/components/ChatTable";
-import TurnDetailPanel from "@/components/TurnDetailPanel";
-import SessionHeader from "@/components/SessionHeader";
-import Insights from "@/components/Insights";
+import UserMenu from "@/components/common/layout/UserMenu";
+import ChatTable from "@/components/session/table/ChatTable";
+import TurnDetailPanel from "@/components/session/detail/TurnDetailPanel";
+import SessionHeader from "@/components/session/header/SessionHeader";
+import Insights from "@/components/common/insights/Insights";
 import { deleteChats } from "@/lib/api";
 import { useSessionChats } from "@/lib/useSessionChats";
 import { useDetailPanel } from "@/lib/useDetailPanel";

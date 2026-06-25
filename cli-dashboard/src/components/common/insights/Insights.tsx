@@ -8,9 +8,9 @@ import {
   type InsightsResponse,
   type InsightsConfig,
 } from "@/lib/api";
-import AiInsightsPanel from "@/components/AiInsightsPanel";
-import SidePanel from "@/components/SidePanel";
-import ModelSelect from "@/components/ModelSelect";
+import AiInsightsPanel from "@/components/common/insights/AiInsightsPanel";
+import SidePanel from "@/components/common/insights/SidePanel";
+import ModelSelect from "@/components/common/insights/ModelSelect";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

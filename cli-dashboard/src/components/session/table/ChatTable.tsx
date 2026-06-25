@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { type Chat } from "@/lib/api";
 import { fmtTime, toRow, type Row } from "@/lib/chats";
-import AgentBadge from "@/components/AgentBadge";
-import ExportPanel from "@/components/ExportPanel";
+import AgentBadge from "@/components/common/ui/AgentBadge";
+import ExportPanel from "@/components/session/table/ExportPanel";
 
 type SortKey = "timestamp" | "input" | "output" | "tools" | "sessionId" | "agent";
 type SortDir = "asc" | "desc";

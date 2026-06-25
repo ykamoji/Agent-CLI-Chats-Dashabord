@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import ToolCard from "@/components/ToolCard";
+import ToolCard from "@/components/session/detail/ToolCard";
 import { type Row, type ToolUse } from "@/lib/chats";
 import { getTurnTools } from "@/lib/api";
 
