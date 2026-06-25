@@ -12,7 +12,6 @@ import {
 // Scalar columns (one value per row). Tool data uses the "tool:" key prefix
 // below so that all selection state lives in a single `cols` Set.
 const EXPORT_COLUMNS: ExportCol[] = [
-  { key: "number",     label: "#",           get: (_r, n) => n },
   { key: "timestamp",  label: "Timestamp",   get: (r) => r.timestamp },
   { key: "input",      label: "Input",       get: (r) => r.input },
   { key: "output",     label: "Output",      get: (r) => r.output },

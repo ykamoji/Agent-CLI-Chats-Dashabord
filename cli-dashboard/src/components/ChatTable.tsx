@@ -254,7 +254,7 @@ export default function ChatTable({
             )}
             {!loading &&
               !error &&
-              sorted.map((r) => {
+              sorted.map((r, index) => {
                 const selected = selectedId === r.id;
                 const isChecked = selectedRowIds.has(r.id);
                 return (
@@ -289,7 +289,7 @@ export default function ChatTable({
                       </td>
                     )}
                     <td className="whitespace-nowrap px-5 py-4 font-mono text-xs text-ink-muted">
-                      {rowNumber.get(r.id)}
+                      {index + 1}
                     </td>
                     <td className="whitespace-nowrap px-5 py-4 font-mono text-xs text-ink-muted">
                       <span title={r.timestamp}>{fmtTime(r.timestamp)}</span>
