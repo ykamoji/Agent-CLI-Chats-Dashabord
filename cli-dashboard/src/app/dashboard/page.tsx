@@ -320,6 +320,7 @@ function DashboardContent() {
                         label={sessionLabel(sessionMap, s.sessionId)}
                         agent={s.agent}
                         groupSessions={s.groupSessions}
+                        count={s.count}
                       />
                     ))}
                   </div>

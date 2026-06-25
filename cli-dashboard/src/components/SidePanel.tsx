@@ -6,11 +6,13 @@ import { createPortal } from "react-dom";
 export default function SidePanel({
   isOpen,
   onClose,
+  onClick,
   title = "Insights",
   children,
 }: {
   isOpen: boolean;
   onClose: () => void;
+  onClick: () => void;
   title?: string;
   children: React.ReactNode;
 }) {
@@ -46,6 +48,7 @@ export default function SidePanel({
 
       {/* Panel */}
       <div
+        onClick={() => onClick()}
         className={`absolute top-0 right-0 h-full w-full max-w-6xl bg-paper shadow-2xl transition-transform duration-300 ease-in-out transform flex flex-col border-l border-ink/10 ${isOpen ? "translate-x-0" : "translate-x-full"
           }`}
       >

@@ -16,6 +16,7 @@ export default function SessionCard({
   selectable,
   selected,
   onToggle,
+  count,
 }: {
   sessionId: string;
   latestTimestamp: string;
@@ -27,6 +28,7 @@ export default function SessionCard({
   selectable?: boolean;
   selected?: boolean;
   onToggle?: (selected: boolean) => void;
+  count?: number;
 }) {
   const tagged = Boolean(name);
   const accent =
@@ -111,22 +113,33 @@ export default function SessionCard({
         {groupSessions ? (
           <div className="text-xs font-medium text-ink-muted">
             {groupSessions.length} {groupSessions.length === 1 ? "session" : "sessions"}
+            {count !== undefined && ` • ${count} turn${count !== 1 ? "s" : ""}`}
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 text-xs text-ink-muted">
-            <svg
-              className="h-3.5 w-3.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="12" cy="12" r="9" />
-              <path d="M12 7v5l3 2" />
-            </svg>
-            <span title={latestTimestamp}>{fmtTime(latestTimestamp)}</span>
+          <div className="flex items-center gap-3 text-xs text-ink-muted">
+            <div className="flex items-center gap-1.5">
+              <svg
+                className="h-3.5 w-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 2" />
+              </svg>
+              <span title={latestTimestamp}>{fmtTime(latestTimestamp)}</span>
+            </div>
+            {count !== undefined && (
+              <div className="flex items-center gap-1.5 border-l border-ink/20 pl-3">
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                <span>{count} turn{count !== 1 ? "s" : ""}</span>
+              </div>
+            )}
           </div>
         )}
         <div className="flex flex-wrap items-center gap-1">

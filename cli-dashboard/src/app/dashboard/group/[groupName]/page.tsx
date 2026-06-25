@@ -274,6 +274,7 @@ function GroupContent() {
                         selectable={selectionEnabled}
                         selected={selectedSessionIds.has(s.sessionId)}
                         onToggle={(selected) => handleToggleSession(s.sessionId, selected)}
+                        count={s.count}
                       />
                     ))}
                   </div>
