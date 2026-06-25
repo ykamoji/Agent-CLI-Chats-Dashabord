@@ -7,8 +7,8 @@ import UserMenu from "@/components/UserMenu";
 import SessionCard from "@/components/SessionCard";
 import SessionCardSkeleton from "@/components/SessionCardSkeleton";
 import SessionGroupModal from "@/components/SessionGroupModal";
-import StatsCards from "@/components/StatsCards";
 import WeekSection from "@/components/WeekSection";
+import Insights from "@/components/Insights";
 import {
   ApiError,
   getChatsSummary,
@@ -63,8 +63,6 @@ function DashboardContent() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [groupModalOpen, setGroupModalOpen] = useState(false);
-  // Bumped on each manual Sync so StatsCards force-refreshes its own data.
-  const [refreshNonce, setRefreshNonce] = useState(0);
 
   const loadChats = useCallback(
     async (mode: "initial" | "refresh") => {
@@ -74,7 +72,6 @@ function DashboardContent() {
       }
       if (mode === "refresh") {
         setRefreshing(true);
-        setRefreshNonce((n) => n + 1);
       }
       setError(null);
       try {
@@ -227,12 +224,17 @@ function DashboardContent() {
           Grouped by session. Select a session to see its turns.
         </p>
 
-        {/* Stats */}
-        <StatsCards
-          isDemo={isDemo}
-          sessionsCount={busy ? null : sessions.length}
-          refreshNonce={refreshNonce}
-        />
+        {/* Latest Insights */}
+        {!busy && (
+          <div className="mt-8">
+            <Insights 
+              scope="global" 
+              isDemo={isDemo} 
+              mode="latest" 
+              chatCount={sessions.reduce((acc, s) => acc + s.count, 0)} 
+            />
+          </div>
+        )}
 
         {/* Sessions */}
         <div className="mt-8">
@@ -275,7 +277,7 @@ function DashboardContent() {
                   <path d="M3 3v18h18" />
                   <path d="m19 9-5 5-4-4-3 3" />
                 </svg>
-                Key insights →
+                Past AI insights →
               </Link>
               <button
                 type="button"

@@ -53,7 +53,7 @@ function InsightsContent() {
         </p>
 
         <div className="mt-6">
-          <Insights scope="global" isDemo={isDemo} />
+          <Insights scope="global" isDemo={isDemo} mode="history" />
         </div>
       </div>
     </main>

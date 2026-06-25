@@ -7,7 +7,9 @@ import {
   type InsightsMetrics,
   type InsightsResponse,
 } from "@/lib/api";
-import AiInsightsPanel from "./AiInsightsPanel";
+import DeterministicPanel from "@/components/DeterministicPanel";
+import AiInsightsPanel from "@/components/AiInsightsPanel";
+import SidePanel from "@/components/SidePanel";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -119,16 +121,25 @@ function GenerateButton({
 export default function Insights({
   scope,
   sessionId,
+  groupName,
+  sessionIds,
+  chatCount,
   isDemo = false,
+  mode = "latest",
 }: {
-  scope: "global" | "session";
+  scope: "global" | "session" | "group";
   sessionId?: string;
+  groupName?: string;
+  sessionIds?: string[];
+  chatCount?: number;
   isDemo?: boolean;
+  mode?: "latest" | "history";
 }) {
   const [data, setData] = useState<InsightsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -140,14 +151,14 @@ export default function Insights({
 
   const load = useCallback(async () => {
     try {
-      const r = await getInsights({ scope, sessionId, demo: isDemo });
+      const r = await getInsights({ scope, sessionId, groupName, sessionIds, chatCount, demo: isDemo });
       if (mounted.current) setData(r);
     } catch {
       if (mounted.current) setError("Could not load insights.");
     } finally {
       if (mounted.current) setLoading(false);
     }
-  }, [scope, sessionId, isDemo]);
+  }, [scope, sessionId, groupName, sessionIds, chatCount, isDemo]);
 
   useEffect(() => {
     load();
@@ -157,12 +168,12 @@ export default function Insights({
     setGenerating(true);
     setError(null);
     try {
-      await generateInsights({ scope, sessionId, force: true });
+      await generateInsights({ scope, sessionId, groupName, sessionIds, force: true });
       const start = Date.now();
       // Poll until the background job finishes (or we time out).
       while (mounted.current && Date.now() - start < 60_000) {
         await sleep(2000);
-        const r = await getInsights({ scope, sessionId, demo: isDemo });
+        const r = await getInsights({ scope, sessionId, groupName, sessionIds, chatCount, forceRefresh: true, demo: isDemo });
         if (!mounted.current) return;
         setData(r);
         // Check if the newest doc is done
@@ -174,7 +185,7 @@ export default function Insights({
     } finally {
       if (mounted.current) setGenerating(false);
     }
-  }, [scope, sessionId, isDemo]);
+  }, [scope, sessionId, groupName, sessionIds, chatCount, isDemo]);
 
   const docs = data?.docs ?? [];
   const modelAvailable = data?.modelAvailable ?? false;
@@ -182,52 +193,98 @@ export default function Insights({
   const busy = generating || hasPending;
   const canGenerate = !isDemo && modelAvailable;
 
+  const pastDocs = docs.length > 1 ? docs.slice(1) : [];
+
   return (
     <div className="space-y-6">
-      {/* Deterministic, always-on */}
-      {loading ? (
-        <p className="rounded-2xl border border-ink/10 bg-white px-5 py-8 text-center text-sm text-ink-muted shadow-material">
-          Loading…
-        </p>
-      ) : (
-        data && <DeterministicPanel m={data.metrics} />
+      {mode === "latest" && (
+        <>
+          {/* Loading Animation or Button */}
+          {loading ? (
+            <div className="relative h-14 w-full overflow-hidden rounded-2xl bg-white border border-ink/5 flex items-center px-5 shadow-sm">
+              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-blue-500/10 to-transparent animate-shimmer" />
+              <span className="relative flex items-center gap-3 text-sm font-medium text-ink-muted">
+                <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                Analyzing conversations...
+              </span>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-4 rounded-2xl border border-ink/5 shadow-sm gap-4">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setPanelOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                  </svg>
+                  Gemini Insights ✨
+                </button>
+                <div className="flex flex-col">
+                  {canGenerate && docs.length === 0 && !generating && (
+                    <span className="text-xs text-ink-muted">No insights yet. Open panel to generate.</span>
+                  )}
+                  {!modelAvailable && (
+                    <span className="text-xs text-ink-muted">AI insights disabled (missing GOOGLE_API_KEY).</span>
+                  )}
+                  {isDemo && docs.length === 0 && (
+                    <span className="text-xs text-ink-muted">Log in to generate AI insights.</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <SidePanel isOpen={panelOpen} onClose={() => setPanelOpen(false)} title="Insights Details">
+            {data && <DeterministicPanel m={data.metrics} />}
+
+            <div className="flex items-center justify-between mt-4">
+              <h3 className="font-display text-lg font-bold">AI Analysis</h3>
+              {canGenerate && (
+                <GenerateButton busy={busy} hasExisting={docs.length > 0} onGenerate={onGenerate} />
+              )}
+            </div>
+
+            {error && <p className="text-sm text-red-500">{error}</p>}
+
+            {docs.length === 0 && modelAvailable && !isDemo && !generating && (
+              <div className="rounded-2xl border border-ink/10 bg-white p-6 text-center shadow-material mt-2">
+                <p className="text-sm text-ink-muted">
+                  No insights yet. Click the generate button to analyze your history.
+                </p>
+              </div>
+            )}
+
+            {docs.length > 0 && (
+              <div className="mt-2">
+                <AiInsightsPanel key={docs[0].timestamp ?? 0} doc={docs[0]} scope={scope} />
+              </div>
+            )}
+          </SidePanel>
+        </>
       )}
 
-      {/* Generate button + status messages */}
-      <div className="flex items-center gap-3">
-        {canGenerate && (
-          <GenerateButton busy={busy} hasExisting={docs.length > 0} onGenerate={onGenerate} />
-        )}
-        {!loading && !modelAvailable && (
-          <p className="text-xs text-ink-muted">
-            AI insights are off. Set <span className="font-mono">GOOGLE_API_KEY</span> on the server to enable them.
-          </p>
-        )}
-        {!loading && isDemo && docs.length === 0 && (
-          <p className="text-xs text-ink-muted">
-            Log in to generate AI insights for your own history.
-          </p>
-        )}
-      </div>
-      {error && <p className="text-sm text-red-500">{error}</p>}
-
-      {/* AI insight cards (descending order) */}
-      {!loading && docs.length === 0 && modelAvailable && !isDemo && !generating && (<>
-        <div className="rounded-2xl bg-ink text-paper p-6">
-          <div className="flex items-center gap-2">
-            <h2 className="font-display text-lg font-bold">AI insights</h2>
-          </div>
-          <p className="mt-1 text-xs text-paper/60">
-            {scope === "session" ? "For this session" : "Across your history"} · powered by Gemini
-          </p>
-        </div>
-        <p className="px-5 py-4 text-center text-sm text-ink-muted">
-          No insights yet. {canGenerate && (<><GenerateButton busy={busy} hasExisting={false} onGenerate={onGenerate} /> to analyze your history.</>)}
-        </p>
-      </>)}
-      {docs.map((doc, i) => (
-        <AiInsightsPanel key={doc.timestamp ?? i} doc={doc} scope={scope} />
-      ))}
+      {mode === "history" && (
+        <>
+          {loading ? (
+            <div className="relative h-14 w-full overflow-hidden rounded-2xl bg-white border border-ink/5 flex items-center px-5 shadow-sm">
+              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-blue-500/10 to-transparent animate-shimmer" />
+              <span className="relative flex items-center gap-3 text-sm font-medium text-ink-muted">
+                <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                Analyzing conversations...
+              </span>
+            </div>
+          ) : pastDocs.length === 0 ? (
+            <p className="rounded-2xl border border-ink/10 bg-white px-5 py-8 text-center text-sm text-ink-muted shadow-material">
+              No past insights available.
+            </p>
+          ) : (
+            pastDocs.map((doc, i) => (
+              <AiInsightsPanel key={doc.timestamp ?? i} doc={doc} scope={scope} />
+            ))
+          )}
+        </>
+      )}
     </div>
   );
 }

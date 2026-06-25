@@ -7,6 +7,7 @@ import UserMenu from "@/components/UserMenu";
 import ChatTable from "@/components/ChatTable";
 import TurnDetailPanel from "@/components/TurnDetailPanel";
 import SessionHeader from "@/components/SessionHeader";
+import Insights from "@/components/Insights";
 import { deleteChats } from "@/lib/api";
 import { useSessionChats } from "@/lib/useSessionChats";
 import { useDetailPanel } from "@/lib/useDetailPanel";
@@ -122,7 +123,7 @@ function SessionContent() {
               <path d="M3 3v18h18" />
               <path d="m19 9-5 5-4-4-3 3" />
             </svg>
-            Key insights →
+            Past AI insights →
           </Link>
         </div>
 
@@ -136,6 +137,13 @@ function SessionContent() {
           showTurns={!loading && !error}
           agent={chats[0]?.cli_agent as string | undefined}
         />
+
+        {/* Latest Insights */}
+        {!loading && !error && (
+          <div className="mt-6">
+            <Insights scope="session" sessionId={sessionId} isDemo={isDemo} mode="latest" chatCount={chats.length} />
+          </div>
+        )}
 
         {/* Turns table (session column removed) */}
         <div className="mt-6">

@@ -65,10 +65,13 @@ def _outliers_high(values):
     return q3 + 1.5 * iqr
 
 
-def compute_metrics(user_id: str, session_id: str | None = None) -> dict:
+def compute_metrics(user_id: str, session_ids: list[str] | str | None = None) -> dict:
     query = {"user_id": {"$in": id_variants(user_id)}}
-    if session_id:
-        query["session_id"] = session_id
+    if session_ids:
+        if isinstance(session_ids, list):
+            query["session_id"] = {"$in": session_ids}
+        else:
+            query["session_id"] = session_ids
     docs = list(logs_collection().find(query, _PROJECTION))
 
     total = len(docs)
@@ -151,9 +154,9 @@ def compute_metrics(user_id: str, session_id: str | None = None) -> dict:
         "agent_breakdown": agents,
     }
 
-    # Per-session shape (session scope only).
-    if session_id:
-        items = by_session.get(session_id, docs)
+    # Per-session shape (session scope only - assumes single session_id).
+    if isinstance(session_ids, str):
+        items = by_session.get(session_ids, docs)
         stamps = sorted(t for t in (_ts(d) for d in items) if t)
         duration = None
         if len(stamps) >= 2:
@@ -173,7 +176,7 @@ def compute_metrics(user_id: str, session_id: str | None = None) -> dict:
 
     # Deterministic anomalies.
     anomalies: list[str] = []
-    if not session_id:
+    if not isinstance(session_ids, str):
         turn_counts = [len(v) for v in by_session.values()]
         fence = _outliers_high(turn_counts)
         if fence is not None:

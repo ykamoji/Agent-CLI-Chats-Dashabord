@@ -59,7 +59,7 @@ function SessionInsightsContent() {
         </p>
 
         <div className="mt-6">
-          <Insights scope="session" sessionId={sessionId} isDemo={isDemo} />
+          <Insights scope="session" sessionId={sessionId} isDemo={isDemo} mode="history" />
         </div>
       </div>
     </main>

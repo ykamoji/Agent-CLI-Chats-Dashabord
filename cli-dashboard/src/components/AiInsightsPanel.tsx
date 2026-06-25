@@ -29,7 +29,7 @@ export default function AiInsightsPanel({
   scope,
 }: {
   doc: InsightsDoc;
-  scope: "global" | "session";
+  scope: "global" | "session" | "group";
 }) {
   const [aiOpen, setAiOpen] = useState(true);
   const contentRef = useRef<HTMLDivElement>(null);

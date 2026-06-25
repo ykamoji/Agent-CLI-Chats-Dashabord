@@ -38,27 +38,30 @@ def _as_utc(value: datetime) -> datetime:
     return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
 
 
-def _latest(user_id: str, scope: str, session_id):
-    return insights_collection().find_one(
-        {"user_id": str(user_id), "scope": scope, "session_id": session_id},
-        sort=[("timestamp", -1)],
-    )
+def _latest(user_id: str, scope: str, session_id: str | None = None, group_name: str | None = None):
+    query = {"user_id": str(user_id), "scope": scope}
+    if scope == "session":
+        query["session_id"] = session_id
+    elif scope == "group":
+        query["group_name"] = group_name
+    return insights_collection().find_one(query, sort=[("timestamp", -1)])
 
 
-def _all_docs(user_id: str, scope: str, session_id):
-    return list(
-        insights_collection()
-        .find({"user_id": str(user_id), "scope": scope, "session_id": session_id})
-        .sort("timestamp", -1)
-    )
+def _all_docs(user_id: str, scope: str, session_id: str | None = None, group_name: str | None = None):
+    query = {"user_id": str(user_id), "scope": scope}
+    if scope == "session":
+        query["session_id"] = session_id
+    elif scope == "group":
+        query["group_name"] = group_name
+    return list(insights_collection().find(query).sort("timestamp", -1))
 
 
-def _generate_and_store(doc_id, user_id: str, scope: str, session_id):
+def _generate_and_store(doc_id, user_id: str, scope: str, session_ids: list[str] | str | None):
     """Background worker: run the model and update the pending row."""
     coll = insights_collection()
     try:
-        metrics = compute_metrics(user_id, session_id if scope == "session" else None)
-        result = insights_llm.generate(user_id, scope, session_id, metrics)
+        metrics = compute_metrics(user_id, session_ids)
+        result = insights_llm.generate(user_id, scope, session_ids, metrics)
         if result is None:
             coll.update_one(
                 {"_id": doc_id},
@@ -102,22 +105,33 @@ def create_insights():
 
     data = request.get_json(silent=True) or {}
     scope = data.get("scope") or "global"
-    if scope not in ("global", "session"):
+    if scope not in ("global", "session", "group"):
         return jsonify({"error": "invalid_scope"}), 400
     session_id = data.get("session_id") if scope == "session" else None
     if scope == "session" and not session_id:
         return jsonify({"error": "session_id_required"}), 400
+    group_name = data.get("group_name") if scope == "group" else None
+    if scope == "group" and not group_name:
+        return jsonify({"error": "group_name_required"}), 400
+    
+    session_ids_list = data.get("session_ids") if scope == "group" else None
+    session_ids_for_generation = session_ids_list if scope == "group" else session_id
 
     force = bool(data.get("force"))
     coll = insights_collection()
 
     # Don't stack concurrent generations.
-    if coll.find_one({"user_id": str(user_id), "scope": scope,
-                      "session_id": session_id, "status": "pending"}):
+    query = {"user_id": str(user_id), "scope": scope, "status": "pending"}
+    if scope == "session":
+        query["session_id"] = session_id
+    elif scope == "group":
+        query["group_name"] = group_name
+
+    if coll.find_one(query):
         return jsonify({"status": "pending"}), 202
 
     # Reuse a recent completed row unless forced.
-    latest = _latest(user_id, scope, session_id)
+    latest = _latest(user_id, scope, session_id, group_name)
     if latest and latest.get("status") == "complete" and not force:
         age = (datetime.now(timezone.utc) - _as_utc(latest["timestamp"])).total_seconds()
         if age < config.INSIGHTS_MIN_REGEN_SECONDS:
@@ -127,6 +141,7 @@ def create_insights():
         "user_id": str(user_id),
         "scope": scope,
         "session_id": session_id,
+        "group_name": group_name,
         "status": "pending",
         "timestamp": datetime.now(timezone.utc),
         "logs_used_count": 0,
@@ -141,7 +156,7 @@ def create_insights():
 
     threading.Thread(
         target=_generate_and_store,
-        args=(doc_id, str(user_id), scope, session_id),
+        args=(doc_id, str(user_id), scope, session_ids_for_generation),
         daemon=True,
     ).start()
 
@@ -158,9 +173,15 @@ def read_insights():
 
     scope = request.args.get("scope") or "global"
     session_id = request.args.get("session_id") if scope == "session" else None
+    group_name = request.args.get("group_name") if scope == "group" else None
+    
+    # In GET request, session_ids for a group could be passed as a comma-separated query param
+    session_ids_param = request.args.get("session_ids")
+    session_ids_list = session_ids_param.split(",") if session_ids_param else None
+    session_ids_for_generation = session_ids_list if scope == "group" else session_id
 
-    metrics = compute_metrics(user_id, session_id if scope == "session" else None)
-    all_docs = _all_docs(user_id, scope, session_id)
+    metrics = compute_metrics(user_id, session_ids_for_generation)
+    all_docs = _all_docs(user_id, scope, session_id, group_name)
 
     return jsonify({
         "docs": [json_safe(d) for d in all_docs],

@@ -170,63 +170,6 @@ def get_chats_summary():
     return jsonify({**result, "session_map": session_map, "groups": groups_list})
 
 
-@bp.get("/api/chats/stats")
-def get_chats_stats():
-    force_refresh = request.args.get("refresh") in ("1", "true", "True")
-
-    user_id = None
-    if request.args.get("demo"):
-        viewer = users_collection().find_one({"role": "viewer"})
-        if viewer:
-            user_id = str(viewer.get("user_id") or viewer.get("_id"))
-    else:
-        token = extract_token()
-        session = get_active_session(token)
-        if session:
-            user_id = session["user_id"] or request.args.get("user_id")
-
-    if not user_id:
-        if not request.args.get("demo"):
-            return jsonify({"error": "invalid_or_expired_session"}), 401
-        return jsonify({"stats": {"total": 0, "toolCalls": 0, "distinctTools": 0}})
-
-    cache_key = f"chats_stats:{user_id}"
-    result = None
-    if not force_refresh:
-        result = cache.get(cache_key)
-
-    if result is None:
-        query = {"user_id": {"$in": id_variants(user_id)}}
-        projection = {
-            "_id": 1,
-            "Tools Used": 1
-        }
-        cursor = logs_collection().find(query, projection)
-        
-        total = 0
-        tool_calls = 0
-        distinct_tools = set()
-
-        for doc in cursor:
-            total += 1
-            tools = doc.get("Tools Used")
-            if isinstance(tools, list):
-                tool_calls += len(tools)
-                for t in tools:
-                    if isinstance(t, dict) and t.get("tool"):
-                        distinct_tools.add(t["tool"])
-
-        result = {
-            "stats": {
-                "total": total,
-                "toolCalls": tool_calls,
-                "distinctTools": len(distinct_tools)
-            }
-        }
-        cache.set(cache_key, result, timeout=config.CHATS_CACHE_TTL)
-
-    return jsonify(result)
-
 @bp.get("/api/chats/tool")
 def get_chats_tool():
     if request.args.get("demo"):

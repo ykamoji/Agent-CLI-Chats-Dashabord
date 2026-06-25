@@ -39,11 +39,14 @@ def _get_client():
     return _client
 
 
-def _build_digest(user_id: str, session_id: str | None) -> list[dict]:
+def _build_digest(user_id: str, session_ids: list[str] | str | None) -> list[dict]:
     """Compact, token-bounded per-turn digest (most recent turns first)."""
     query = {"user_id": {"$in": id_variants(user_id)}}
-    if session_id:
-        query["session_id"] = session_id
+    if session_ids:
+        if isinstance(session_ids, list):
+            query["session_id"] = {"$in": session_ids}
+        else:
+            query["session_id"] = session_ids
     projection = {
         "_id": 0,
         "Input": 1,
@@ -86,12 +89,15 @@ def _build_digest(user_id: str, session_id: str | None) -> list[dict]:
 
 def _prompt(scope: str, metrics: dict, digest: list[dict]) -> str:
     # 1. Give the model a specific analytical lens based on the scope
-    target = "a single coding session" if scope == "session" else "all of the user's coding sessions"
-    lens = (
-        "Focus on micro-interactions, immediate prompt missteps, and turn-by-turn friction." 
-        if scope == "session" 
-        else "Focus on macro-trends, recurring bad habits across sessions, and overarching tool usage patterns."
-    )
+    if scope == "session":
+        target = "a single coding session"
+        lens = "Focus on micro-interactions, immediate prompt missteps, and turn-by-turn friction."
+    elif scope == "group":
+        target = "a specific group of coding sessions"
+        lens = "Focus on macro-trends across this specific group, recurring bad habits, and overarching tool usage patterns."
+    else:
+        target = "all of the user's coding sessions"
+        lens = "Focus on macro-trends, recurring bad habits across sessions, and overarching tool usage patterns."
     
     return f"""You are an expert prompt-engineering analyst for CLI coding agents (Claude, Antigravity).
 Analyze {target} and produce actionable insights that help the user write better prompts.
@@ -116,12 +122,12 @@ Based on the provided data, return a JSON payload matching the requested schema.
 """
 
 
-def generate(user_id: str, scope: str, session_id: str | None, metrics: dict) -> dict | None:
+def generate(user_id: str, scope: str, session_ids: list[str] | str | None, metrics: dict) -> dict | None:
     """Run Gemini. Returns the structured insight dict, or None if unavailable."""
     if not is_available():
         return None
 
-    digest = _build_digest(user_id, session_id)
+    digest = _build_digest(user_id, session_ids)
     response = _get_client().models.generate_content(
         model=config.GOOGLE_MODEL_NAME,
         contents=_prompt(scope, metrics, digest),
