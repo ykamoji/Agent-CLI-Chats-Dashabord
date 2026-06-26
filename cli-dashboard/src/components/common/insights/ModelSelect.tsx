@@ -6,8 +6,8 @@ const OPTIONS: { value: string; label: string }[] = [
   { value: "gemini-3.1-flash-lite", label: "Gemini 3.1 Flash Lite" },
   { value: "gemini-3-flash", label: "Gemini 3 Flash" },
   { value: "gemini-3.5-flash", label: "Gemini 3.5 Flash" },
-  { value: "gemma-3-27b-it", label: "Gemma 3 27B IT" },
-  { value: "gemma-4-31b-it", label: "Gemma 4 31B IT" },
+  { value: "gemma-3-27b-it", label: "Gemma 3" },
+  { value: "gemma-4-31b-it", label: "Gemma 4" },
 ];
 
 export default function ModelSelect({
@@ -56,9 +56,8 @@ export default function ModelSelect({
       >
         <span className="truncate">{current.label}</span>
         <svg
-          className={`h-3 w-3 shrink-0 text-ink-muted transition-transform duration-200 ${
-            open ? "rotate-180" : ""
-          }`}
+          className={`h-3 w-3 shrink-0 text-ink-muted transition-transform duration-200 ${open ? "rotate-180" : ""
+            }`}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"

@@ -93,13 +93,10 @@ def _generate_and_store(doc_id, user_id: str, scope: str, session_ids: list[str]
 
 @bp.post("/api/insights")
 def create_insights():
-    # Generation is auth-only (no demo) and needs a configured model.
-    if request.args.get("demo"):
-        return jsonify({"error": "generation_not_allowed_in_demo"}), 403
     if not insights_llm.is_available():
         return jsonify({"error": "model_unavailable"}), 503
 
-    user_id, _ = _resolve_user(allow_demo=False)
+    user_id, _ = _resolve_user(allow_demo=True)
     if not user_id:
         return jsonify({"error": "invalid_or_expired_session"}), 401
 

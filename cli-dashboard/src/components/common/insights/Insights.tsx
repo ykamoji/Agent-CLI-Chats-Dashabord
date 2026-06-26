@@ -26,7 +26,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 }
 
 function DeterministicPanel({ m }: { m: InsightsMetrics }) {
-  if (!m || !m.total_turns) {
+  if (!m || !m.total_conversations) {
     return (
       <p className="rounded-2xl border border-ink/10 bg-white px-5 py-8 text-center text-sm text-ink-muted shadow-material">
         No data yet.
@@ -35,16 +35,16 @@ function DeterministicPanel({ m }: { m: InsightsMetrics }) {
   }
   const pct = (v?: number) => (v == null ? "—" : `${v}%`);
   const cards: { label: string; value: string }[] = [
-    { label: "Conversations", value: String(m.total_turns) },
+    { label: "Conversations", value: String(m.total_conversations) },
     m.session_shape
-      ? { label: "Tools / Conversation", value: String(m.session_shape.tools_per_turn) }
+      ? { label: "Tools / Conversation", value: String(m.session_shape.tools_per_conversation) }
       : { label: "Sessions", value: String(m.total_sessions ?? 0) },
     { label: "Tool calls", value: String(m.tool_calls ?? 0) },
     { label: "Tool error rate", value: pct(m.tool_error_rate) },
     { label: "Empty output", value: pct(m.empty_output_rate) },
     { label: "Specific prompts", value: pct(m.prompt_specificity_rate) },
     { label: "Vague prompts", value: pct(m.vague_prompt_rate) },
-    { label: "Avg tools / Conversation", value: String(m.avg_tools_per_turn ?? 0) },
+    { label: "Avg tools / Conversation", value: String(m.avg_tools_per_conversation ?? 0) },
   ];
 
   return (
@@ -202,7 +202,7 @@ export default function Insights({
     setError(null);
     setShowSettings(false);
     try {
-      await generateInsights({ scope, sessionId, groupName, sessionIds, force: true, config: customConfig || undefined });
+      await generateInsights({ scope, sessionId, groupName, sessionIds, force: true, config: customConfig || undefined, demo: isDemo });
       const start = Date.now();
       // Poll until the background job finishes (or we time out).
       while (mounted.current && Date.now() - start < 60_000) {
@@ -225,7 +225,7 @@ export default function Insights({
   const modelAvailable = data?.modelAvailable ?? false;
   const hasPending = docs.some((d) => d.status === "pending");
   const busy = generating || hasPending;
-  const canGenerate = !isDemo && modelAvailable;
+  const canGenerate = modelAvailable;
 
   const pastDocs = docs.length > 1 ? docs.slice(1) : [];
 
@@ -261,9 +261,6 @@ export default function Insights({
                   {!modelAvailable && (
                     <span className="text-xs text-ink-muted">AI insights disabled (missing GOOGLE_API_KEY).</span>
                   )}
-                  {isDemo && docs.length === 0 && (
-                    <span className="text-xs text-ink-muted">Log in to generate AI insights.</span>
-                  )}
                 </div>
               </div>
             </div>
@@ -296,7 +293,10 @@ export default function Insights({
                         </button>
 
                         {showSettings && customConfig && (
-                          <div className="absolute top-full right-0 lg:left-0 z-50 mt-2 w-[280px] rounded-xl border border-ink/10 bg-white p-4 shadow-material animate-in fade-in zoom-in-95">
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute top-full right-0 lg:left-0 z-50 mt-2 w-[280px] rounded-xl border border-ink/10 bg-white p-4 shadow-material animate-in fade-in zoom-in-95"
+                          >
                             <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-muted">Generation Settings</h4>
                             <div className="space-y-3">
                               <div>
@@ -353,12 +353,23 @@ export default function Insights({
 
                 {error && <p className="text-sm text-red-500">{error}</p>}
 
-                {docs.length === 0 && modelAvailable && !isDemo && !generating && (
+                {docs.length === 0 && modelAvailable && !generating && (<>
+                  <div className="rounded-2xl border border-ink/10 bg-ink p-6 text-paper shadow-material">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h2 className="font-display text-lg font-bold">Insights</h2>
+                      </div>
+                      <p className="mt-1 text-xs text-paper/60">
+                        {scope === "session" ? "For this session" : "Across your history"} · powered by Gemini
+                      </p>
+                    </div>
+                  </div>
                   <div className="rounded-2xl border border-ink/10 bg-white p-6 text-center shadow-material mt-2">
                     <p className="text-sm text-ink-muted">
                       No insights yet. Click the generate button to analyze your history.
                     </p>
                   </div>
+                </>
                 )}
 
                 {docs.length > 0 && (
@@ -389,29 +400,32 @@ export default function Insights({
             )}
           </SidePanel>
         </>
-      )}
+      )
+      }
 
-      {mode === "history" && (
-        <>
-          {loading ? (
-            <div className="relative h-14 w-full overflow-hidden rounded-2xl bg-white border border-ink/5 flex items-center px-5 shadow-sm">
-              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-blue-500/10 to-transparent animate-shimmer" />
-              <span className="relative flex items-center gap-3 text-sm font-medium text-ink-muted">
-                <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                Analyzing conversations...
-              </span>
-            </div>
-          ) : pastDocs.length === 0 ? (
-            <p className="rounded-2xl border border-ink/10 bg-white px-5 py-8 text-center text-sm text-ink-muted shadow-material">
-              No past insights available.
-            </p>
-          ) : (
-            pastDocs.map((doc, i) => (
-              <AiInsightsPanel key={doc.timestamp ?? i} doc={doc} scope={scope} />
-            ))
-          )}
-        </>
-      )}
-    </div>
+      {
+        mode === "history" && (
+          <>
+            {loading ? (
+              <div className="relative h-14 w-full overflow-hidden rounded-2xl bg-white border border-ink/5 flex items-center px-5 shadow-sm">
+                <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-blue-500/10 to-transparent animate-shimmer" />
+                <span className="relative flex items-center gap-3 text-sm font-medium text-ink-muted">
+                  <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                  Analyzing conversations...
+                </span>
+              </div>
+            ) : pastDocs.length === 0 ? (
+              <p className="rounded-2xl border border-ink/10 bg-white px-5 py-8 text-center text-sm text-ink-muted shadow-material">
+                No past insights available.
+              </p>
+            ) : (
+              pastDocs.map((doc, i) => (
+                <AiInsightsPanel key={doc.timestamp ?? i} doc={doc} scope={scope} />
+              ))
+            )}
+          </>
+        )
+      }
+    </div >
   );
 }

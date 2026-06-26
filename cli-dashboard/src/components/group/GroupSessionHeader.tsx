@@ -5,7 +5,6 @@ import { useCallback, useRef, useState } from "react";
 export default function GroupSessionHeader({
   groupName,
   sessionsCount,
-  isDemo,
   onRenameGroup,
   selectionEnabled,
   onEnableSelection,
@@ -13,10 +12,10 @@ export default function GroupSessionHeader({
   onRemoveSelected,
   selectedCount,
   onAddSessionsClick,
+  isAdmin,
 }: {
   groupName: string;
   sessionsCount: number;
-  isDemo: boolean;
   onRenameGroup: (newName: string) => Promise<void>;
   selectionEnabled: boolean;
   onEnableSelection: () => void;
@@ -24,6 +23,7 @@ export default function GroupSessionHeader({
   onRemoveSelected: () => Promise<void>;
   selectedCount: number;
   onAddSessionsClick: () => void;
+  isAdmin: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
@@ -71,7 +71,7 @@ export default function GroupSessionHeader({
         </p>
         {savingName && <span className="text-[10px] text-ink-muted">Saving…</span>}
       </div>
-      
+
       {editing ? (
         <input
           autoFocus
@@ -96,17 +96,19 @@ export default function GroupSessionHeader({
           <div className="min-w-0">
             <h1 className="font-display text-2xl tracking-tight">{groupName}</h1>
           </div>
-          <button
-            type="button"
-            onClick={startEditing}
-            aria-label="Rename group"
-            className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full border border-ink/10 bg-white text-ink-muted shadow-material transition-colors hover:bg-paper-soft hover:text-ink"
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 20h9" />
-              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-            </svg>
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={startEditing}
+              aria-label="Rename group"
+              className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full border border-ink/10 bg-white text-ink-muted shadow-material transition-colors hover:bg-paper-soft hover:text-ink"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+            </button>
+          )}
         </div>
       )}
 
@@ -115,54 +117,56 @@ export default function GroupSessionHeader({
           {sessionsCount} session{sessionsCount !== 1 ? "s" : ""}
         </p>
 
-        <div className="flex items-center gap-2">
-          {selectionEnabled ? (
-            <>
-              <span className="text-xs text-ink-muted mr-2">{selectedCount} selected</span>
-              <button
-                type="button"
-                onClick={handleRemove}
-                disabled={selectedCount === 0 || removing}
-                className="rounded-full border border-red-200 bg-red-50 px-4 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {removing ? "Removing…" : "Remove Selected"}
-              </button>
-              <button
-                type="button"
-                onClick={onCancelSelection}
-                disabled={removing}
-                className="rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={onAddSessionsClick}
-                className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft"
-              >
-                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
-                Add Sessions
-              </button>
-              <button
-                type="button"
-                onClick={onEnableSelection}
-                disabled={sessionsCount === 0}
-                className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft disabled:opacity-50"
-              >
-                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 11l3 3L22 4" />
-                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                </svg>
-                Select
-              </button>
-            </>
-          )}
-        </div>
+        {isAdmin && (
+          <div className="flex items-center gap-2">
+            {selectionEnabled ? (
+              <>
+                <span className="text-xs text-ink-muted mr-2">{selectedCount} selected</span>
+                <button
+                  type="button"
+                  onClick={handleRemove}
+                  disabled={selectedCount === 0 || removing}
+                  className="rounded-full border border-red-200 bg-red-50 px-4 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {removing ? "Removing…" : "Remove Selected"}
+                </button>
+                <button
+                  type="button"
+                  onClick={onCancelSelection}
+                  disabled={removing}
+                  className="rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={onAddSessionsClick}
+                  className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft"
+                >
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                  Add Sessions
+                </button>
+                <button
+                  type="button"
+                  onClick={onEnableSelection}
+                  disabled={sessionsCount === 0}
+                  className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft disabled:opacity-50"
+                >
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 11l3 3L22 4" />
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                  </svg>
+                  Select
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
