@@ -12,6 +12,7 @@ import {
   ApiError,
   getChatsSummary,
   getDemoChatsSummary,
+  getStoredUser,
   isAuthenticated,
   sessionLabel,
   sessionName,
@@ -56,6 +57,9 @@ function GroupContent() {
 
   const demoUser = searchParams.get("demo");
   const isDemo = Boolean(demoUser);
+
+  const user = getStoredUser();
+  const isAdmin = user?.role === "admin";
 
   const [sessions, setSessions] = useState<SessionGroup[]>([]);
   const [sessionMap, setSessionMap] = useState<SessionMap>([]);
@@ -138,8 +142,7 @@ function GroupContent() {
   const dashboardHref = `/dashboard${isDemo ? `?demo=${encodeURIComponent(demoUser as string)}` : ""}`;
 
   const sessionHref = (sid: string) =>
-    `/dashboard/session/${encodeURIComponent(sid)}${
-      isDemo ? `?demo=${encodeURIComponent(demoUser as string)}` : ""
+    `/dashboard/session/${encodeURIComponent(sid)}${isDemo ? `?demo=${encodeURIComponent(demoUser as string)}` : ""
     }`;
 
   const handleRenameGroup = async (newName: string) => {
@@ -210,11 +213,10 @@ function GroupContent() {
             ← Back to dashboard
           </Link>
         </div>
-        
+
         <GroupSessionHeader
           groupName={groupName}
           sessionsCount={groupSessions.length}
-          isDemo={isDemo}
           onRenameGroup={handleRenameGroup}
           selectionEnabled={selectionEnabled}
           onEnableSelection={() => setSelectionEnabled(true)}
@@ -222,16 +224,17 @@ function GroupContent() {
           onRemoveSelected={handleRemoveSelected}
           selectedCount={selectedSessionIds.size}
           onAddSessionsClick={() => setAddModalOpen(true)}
+          isAdmin={isAdmin}
         />
 
         <div className="mt-6">
           {!loading && groupSessions.length > 0 && (
-            <Insights 
-              scope="group" 
-              groupName={groupName} 
-              sessionIds={groupSessions.map(s => s.sessionId)} 
-              isDemo={isDemo} 
-              mode="latest" 
+            <Insights
+              scope="group"
+              groupName={groupName}
+              sessionIds={groupSessions.map(s => s.sessionId)}
+              isDemo={isDemo}
+              mode="latest"
               chatCount={groupSessions.reduce((acc, s) => acc + s.count, 0)}
             />
           )}

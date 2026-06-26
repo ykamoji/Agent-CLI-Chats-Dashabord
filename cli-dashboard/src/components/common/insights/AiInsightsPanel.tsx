@@ -113,7 +113,7 @@ export default function AiInsightsPanel({
             {scope === "session" ? "For this session" : "Across your history"} · powered by Gemini
           </p>
           {doc.status === "pending" && <p className="text-xs mt-3 pt-3 text-paper/70">Analyzing your conversation history…</p>}
-          {doc.status === "complete" && doc.reasoning && (<>
+          {hasCompleteData && doc.reasoning && (<>
             <p className="mt-3 pt-3 border-t border-paper/10 text-[13px] italic text-paper/50">
               {doc.reasoning}
             </p>
@@ -123,6 +123,9 @@ export default function AiInsightsPanel({
             </p>
           </>
           )}
+          {doc.status === "error" && <p className="text-xs mt-4 text-red-300">
+            Generation failed{doc.error ? `: ${doc.error}` : "."} Try again.
+          </p>}
         </div>
       </div>
 
@@ -136,21 +139,15 @@ export default function AiInsightsPanel({
       >
         <div className="overflow-hidden">
           <div ref={contentRef} className="mt-5">
-            {doc.status === "complete" ? (
-              <div className="flex flex-col gap-6">
-                <div>
-                  <BentoSection title="Prompt recommendations" items={doc.recommendations} type="success" />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <BentoSection title="Insights" items={doc.insights} type="info" />
-                  <BentoSection title="Anomalies" items={doc.anomalies} type="warning" />
-                </div>
+            <div className="flex flex-col gap-6">
+              <div>
+                <BentoSection title="Prompt recommendations" items={doc.recommendations} type="success" />
               </div>
-            ) : (doc.status === "error" ? (
-              <p className="text-sm text-red-300">
-                Generation failed{doc.error ? `: ${doc.error}` : "."} Try again.
-              </p>
-            ) : null)}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <BentoSection title="Insights" items={doc.insights} type="info" />
+                <BentoSection title="Anomalies" items={doc.anomalies} type="warning" />
+              </div>
+            </div>
           </div>
         </div>
       </div>

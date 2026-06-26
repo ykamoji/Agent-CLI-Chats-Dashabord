@@ -8,7 +8,7 @@ import ChatTable from "@/components/session/table/ChatTable";
 import TurnDetailPanel from "@/components/session/detail/TurnDetailPanel";
 import SessionHeader from "@/components/session/header/SessionHeader";
 import Insights from "@/components/common/insights/Insights";
-import { deleteChats } from "@/lib/api";
+import { deleteChats, getStoredUser } from "@/lib/api";
 import { useSessionChats } from "@/lib/useSessionChats";
 import { useDetailPanel } from "@/lib/useDetailPanel";
 
@@ -24,6 +24,8 @@ function SessionContent() {
   const demoUser = searchParams.get("demo");
   const isDemo = Boolean(demoUser);
 
+  const user = getStoredUser();
+  const isAdmin = user?.role === "admin";
 
   const {
     chats,
@@ -136,7 +138,7 @@ function SessionContent() {
             refreshing={refreshing}
             selectedId={panel.open ? panel.selected?.row.id ?? null : null}
             onRowClick={panel.handleRowClick}
-            onDelete={async (selectedRawChats) => {
+            onDelete={isAdmin ? async (selectedRawChats) => {
               removeChats(selectedRawChats); // optimistic
               const records = selectedRawChats.map((raw) => ({
                 entry_index: raw.entry_index,
@@ -146,7 +148,7 @@ function SessionContent() {
               }));
               await deleteChats(records, isDemo);
               reload();
-            }}
+            } : undefined}
           />
         </div>
       </div>

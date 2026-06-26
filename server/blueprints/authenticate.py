@@ -50,6 +50,7 @@ def authenticate():
                 "username": username,
                 "email": email,
                 "password": generate_password_hash(password),
+                "role": "user",
             }
         )
 
@@ -63,6 +64,7 @@ def authenticate():
                     "user_id": user_id,
                     "username": username,
                     "email": email,
+                    "role": "user",
                 },
             }
         )
@@ -95,6 +97,7 @@ def authenticate():
                 "user_id": user_id,
                 "username": user.get("username") or user.get("name"),
                 "email": user.get("email"),
+                "role": user.get("role", "user"),
             },
         }
     )

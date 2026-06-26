@@ -11,6 +11,7 @@ export type User = {
   user_id: string;
   username: string;
   email: string;
+  role?: string;
 };
 
 // A chat log row. The server stores flexible documents, so fields are optional.
@@ -476,7 +477,7 @@ export function updateSessionGroup(
 // --- insights ----------------------------------------------------------------
 
 export type InsightsMetrics = {
-  total_turns: number;
+  total_conversations: number;
   total_sessions?: number;
   tool_calls?: number;
   distinct_tools?: number;
@@ -487,12 +488,12 @@ export type InsightsMetrics = {
   prompt_specificity_rate?: number;
   vague_prompt_rate?: number;
   avg_prompt_words?: number;
-  avg_tools_per_turn?: number;
+  avg_tools_per_conversation?: number;
   agent_breakdown?: Record<string, number>;
   session_shape?: {
     conversations: number;
     duration_seconds: number | null;
-    tools_per_turn: number;
+    tools_per_conversation: number;
     error_turns: number;
   };
   anomalies?: string[];
@@ -589,17 +590,18 @@ export async function generateInsights(opts: {
   sessionIds?: string[];
   force?: boolean;
   config?: InsightsConfig;
+  demo?: boolean;
 }): Promise<{ status: string }> {
-  const { scope, sessionId, groupName, sessionIds, force, config } = opts;
+  const { scope, sessionId, groupName, sessionIds, force, config, demo } = opts;
   const uid = getStoredUser()?.user_id;
-  const qs = uid ? `?user_id=${encodeURIComponent(uid)}` : "";
+  const qs = demo ? "?demo=true" : (uid ? `?user_id=${encodeURIComponent(uid)}` : "");
   return request<{ status: string }>(
     `/api/insights${qs}`,
     {
       method: "POST",
       body: JSON.stringify({ scope, session_id: sessionId, group_name: groupName, session_ids: sessionIds, force, config }),
     },
-    true
+    !demo
   );
 }
 

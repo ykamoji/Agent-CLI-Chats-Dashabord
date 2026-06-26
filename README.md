@@ -22,7 +22,7 @@ The system seamlessly captures and serves your data in the background without in
 
 ```mermaid
 flowchart TD
-    A["CLI Agent Finishes"] -->|"User completes a turn"| B["Post-Hook Triggers"]
+    A["CLI Agent Finishes"] -->|"User completes a conversation"| B["Post-Hook Triggers"]
     B -->|"Extracts input, tools, & responses"| C["Collect Conversation"]
     C -->|"Sends structured data"| D[("Save to MongoDB")]
     D -->|"Loads aggregated history"| E["Retrieve Data via Dashboard"]

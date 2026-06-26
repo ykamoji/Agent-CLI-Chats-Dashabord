@@ -76,7 +76,7 @@ def compute_metrics(user_id: str, session_ids: list[str] | str | None = None) ->
 
     total = len(docs)
     if total == 0:
-        return {"total_turns": 0, "total_sessions": 0, "tool_calls": 0, "anomalies": []}
+        return {"total_conversations": 0, "total_sessions": 0, "tool_calls": 0, "anomalies": []}
 
     tool_calls = 0
     tool_errors = 0
@@ -139,7 +139,7 @@ def compute_metrics(user_id: str, session_ids: list[str] | str | None = None) ->
     top_tools = sorted(tool_counts.items(), key=lambda kv: kv[1], reverse=True)[:8]
 
     metrics = {
-        "total_turns": total,
+        "total_conversations": total,
         "total_sessions": len(by_session),
         "tool_calls": tool_calls,
         "distinct_tools": len(distinct_tools),
@@ -150,7 +150,7 @@ def compute_metrics(user_id: str, session_ids: list[str] | str | None = None) ->
         "prompt_specificity_rate": _pct(specific, total),
         "vague_prompt_rate": _pct(vague, total),
         "avg_prompt_words": round(word_total / total, 1),
-        "avg_tools_per_turn": round(tool_calls / total, 2),
+        "avg_tools_per_conversation": round(tool_calls / total, 2),
         "agent_breakdown": agents,
     }
 
@@ -170,7 +170,7 @@ def compute_metrics(user_id: str, session_ids: list[str] | str | None = None) ->
         metrics["session_shape"] = {
             "conversations": len(items),
             "duration_seconds": duration,
-            "tools_per_turn": round(tool_calls / len(items), 2) if items else 0,
+            "tools_per_conversation": round(tool_calls / len(items), 2) if items else 0,
             "error_turns": error_turns,
         }
 
