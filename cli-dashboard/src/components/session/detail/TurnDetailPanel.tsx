@@ -2,6 +2,7 @@
 
 import TurnDetail from "@/components/session/detail/TurnDetail";
 import { fmtTime, type Row } from "@/lib/chats";
+import { type Bookmark, type Chat } from "@/lib/api";
 
 // Slide-over panel anchored to the right edge. It slides in (leftward) when a
 // Conversation is selected and slides back out (rightward) when closed. A small "<"
@@ -13,6 +14,7 @@ export default function TurnDetailPanel({
   open,
   onClose,
   onReopen,
+  onBookmarkSaved,
 }: {
   row: Row | null;
   rowNumber?: number;
@@ -20,6 +22,7 @@ export default function TurnDetailPanel({
   open: boolean;
   onClose: () => void;
   onReopen: () => void;
+  onBookmarkSaved?: (raw: Chat, bookmark: Bookmark) => void;
 }) {
   const isClaude = (agent ?? "").toLowerCase().includes("claude");
   const agentLabel = isClaude
@@ -112,7 +115,7 @@ export default function TurnDetailPanel({
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5">
           {row ? (
-            <TurnDetail row={row} />
+            <TurnDetail row={row} onBookmarkSaved={onBookmarkSaved} />
           ) : (
             <p className="text-sm text-ink-muted">
               Select a Conversation from the table to view its details.

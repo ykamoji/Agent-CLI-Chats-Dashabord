@@ -7,6 +7,7 @@ import {
   getChats,
   getDemoChats,
   isAuthenticated,
+  type Bookmark,
   type Chat,
   type SessionMap,
 } from "@/lib/api";
@@ -25,7 +26,8 @@ type Action =
   | { type: "load_success"; chats: Chat[]; sessionMap: SessionMap }
   | { type: "load_error"; error: string }
   | { type: "set_session_map"; sessionMap: SessionMap }
-  | { type: "remove_chats"; raws: Chat[] };
+  | { type: "remove_chats"; raws: Chat[] }
+  | { type: "patch_bookmark"; raw: Chat; bookmark: Bookmark };
 
 const initialState: State = {
   status: "loading",
@@ -46,6 +48,21 @@ function reducer(state: State, action: Action): State {
       return { ...state, sessionMap: action.sessionMap };
     case "remove_chats":
       return { ...state, chats: state.chats.filter((c) => !action.raws.includes(c)) };
+    case "patch_bookmark": {
+      const t = action.raw;
+      const matches = (c: Chat) =>
+        c === t ||
+        (c.session_id === t.session_id &&
+          c.entry_index === t.entry_index &&
+          c.cli_agent === t.cli_agent &&
+          c.user_id === t.user_id);
+      return {
+        ...state,
+        chats: state.chats.map((c) =>
+          matches(c) ? { ...c, bookmark: action.bookmark } : c
+        ),
+      };
+    }
     default:
       return state;
   }
@@ -98,6 +115,11 @@ export function useSessionChats(sessionId: string, isDemo: boolean) {
     (raws: Chat[]) => dispatch({ type: "remove_chats", raws }),
     []
   );
+  const patchChatBookmark = useCallback(
+    (raw: Chat, bookmark: Bookmark) =>
+      dispatch({ type: "patch_bookmark", raw, bookmark }),
+    []
+  );
 
   return {
     chats: state.chats,
@@ -108,5 +130,6 @@ export function useSessionChats(sessionId: string, isDemo: boolean) {
     reload: () => load("refresh"),
     applySessionMap,
     removeChats,
+    patchChatBookmark,
   };
 }

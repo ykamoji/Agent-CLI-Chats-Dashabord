@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { type Chat } from "@/lib/api";
 import { fmtTime, toRow, type Row } from "@/lib/chats";
 import AgentBadge from "@/components/common/ui/AgentBadge";
 import ExportPanel from "@/components/session/table/ExportPanel";
+import PageSizeSelect from "@/components/session/table/PageSizeSelect";
 
 type SortKey = "timestamp" | "input" | "output" | "tools" | "sessionId" | "agent";
 type SortDir = "asc" | "desc";
@@ -23,6 +24,10 @@ export default function ChatTable({
   onRowClick,
   onDelete,
   isDemo = false,
+  pageSize = 25,
+  onPageSizeChange,
+  bookmarkOnly = false,
+  onBookmarkOnlyChange,
 }: {
   chats: Chat[];
   loading: boolean;
@@ -36,6 +41,12 @@ export default function ChatTable({
   onRowClick?: (row: Row, rowNumber: number) => void;
   onDelete?: (selectedRawChats: Chat[]) => Promise<void>;
   isDemo?: boolean;
+  pageSize?: number;
+  // When provided, a page-size selector is shown in the header.
+  onPageSizeChange?: (size: number) => void;
+  bookmarkOnly?: boolean;
+  // When provided, a "Bookmarked only" toggle is shown in the header.
+  onBookmarkOnlyChange?: (only: boolean) => void;
 }) {
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
     key: "timestamp",
@@ -95,6 +106,19 @@ export default function ChatTable({
     );
   }
 
+  // Client-side pagination over the sorted set.
+  const [page, setPage] = useState(1);
+  useEffect(() => {
+    setPage(1);
+  }, [chats, sort, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paged = useMemo(
+    () => sorted.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [sorted, safePage, pageSize]
+  );
+
   // Rows the export panel should act on: the selection, or all when none.
   const exportingSelected = selectionEnabled && selectedRowIds.size > 0;
   const exportRows = exportingSelected
@@ -119,7 +143,8 @@ export default function ChatTable({
     );
   }
 
-  const colSpan = (hideSession ? 5 : 7);
+  // +1 for the trailing Bookmark column (rendered in every view).
+  const colSpan = (hideSession ? 5 : 7) + 1;
   const effectiveColSpan = selectionEnabled ? colSpan + 1 : colSpan;
 
   return (
@@ -128,6 +153,42 @@ export default function ChatTable({
         <div className="flex items-center justify-between border-b border-ink/10 px-5 py-4">
           <h2 className="font-display text-lg font-bold">{title}</h2>
           <div className="flex items-center gap-3">
+            {onBookmarkOnlyChange && (
+              <label
+                className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-medium shadow-material transition-colors ${
+                  bookmarkOnly
+                    ? "border-ink bg-ink text-paper"
+                    : "border-ink/15 bg-white text-ink hover:bg-paper-soft"
+                } ${loading || deleting ? "cursor-not-allowed opacity-60" : ""}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={bookmarkOnly}
+                  disabled={loading || deleting}
+                  onChange={(e) => onBookmarkOnlyChange(e.target.checked)}
+                  className="sr-only"
+                />
+                <svg
+                  className="h-3.5 w-3.5"
+                  viewBox="0 0 24 24"
+                  fill={bookmarkOnly ? "currentColor" : "none"}
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+                Bookmarked
+              </label>
+            )}
+            {onPageSizeChange && (
+              <PageSizeSelect
+                value={pageSize}
+                onChange={onPageSizeChange}
+                disabled={loading || deleting}
+              />
+            )}
             {selectionEnabled && selectedRowIds.size > 0 && onDelete && (
               <button
                 type="button"
@@ -228,6 +289,7 @@ export default function ChatTable({
                 <SortHeader label="Tools Used" k="tools" />
                 {!hideSession && <SortHeader label="Session" k="sessionId" />}
                 {!hideSession && <SortHeader label="Agent" k="agent" />}
+                <th className="px-5 py-3 font-medium text-right">Bookmark</th>
               </tr>
             </thead>
             <tbody>
@@ -254,7 +316,7 @@ export default function ChatTable({
               )}
               {!loading &&
                 !error &&
-                sorted.map((r, index) => {
+                paged.map((r) => {
                   const selected = selectedId === r.id;
                   const isChecked = selectedRowIds.has(r.id);
                   return (
@@ -289,7 +351,7 @@ export default function ChatTable({
                         </td>
                       )}
                       <td className="whitespace-nowrap px-5 py-4 font-mono text-xs text-ink-muted">
-                        {index + 1}
+                        {rowNumber.get(r.id) ?? 0}
                       </td>
                       <td className="whitespace-nowrap px-5 py-4 font-mono text-xs text-ink-muted">
                         <span title={r.timestamp}>{fmtTime(r.timestamp)}</span>
@@ -333,12 +395,68 @@ export default function ChatTable({
                           <AgentBadge agent={r.agent} />
                         </td>
                       )}
+                      <td className="px-5 py-4 align-top text-right">
+                        {r.bookmark.enabled ? (
+                          <div className="flex flex-col items-end gap-0.5">
+                            <svg
+                              className="h-4 w-4 text-ink"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-label="Bookmarked"
+                            >
+                              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                            </svg>
+                            {r.bookmark.message && (
+                              <span
+                                className="max-w-[12rem] truncate text-xs text-ink-muted"
+                                title={r.bookmark.message}
+                              >
+                                {r.bookmark.message}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-ink-muted">—</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
             </tbody>
           </table>
         </div>
+        {!loading && !error && sorted.length > 0 && (
+          <div className="flex items-center justify-between gap-3 border-t border-ink/10 px-5 py-3 text-xs text-ink-muted">
+            <span>
+              {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, sorted.length)} of {sorted.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={safePage <= 1}
+                className="rounded-full border border-ink/15 bg-white px-3 py-1 font-medium text-ink shadow-material transition-colors hover:bg-paper-soft disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Prev
+              </button>
+              <span className="font-mono">
+                Page {safePage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={safePage >= totalPages}
+                className="rounded-full border border-ink/15 bg-white px-3 py-1 font-medium text-ink shadow-material transition-colors hover:bg-paper-soft disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Export config slide-over */}

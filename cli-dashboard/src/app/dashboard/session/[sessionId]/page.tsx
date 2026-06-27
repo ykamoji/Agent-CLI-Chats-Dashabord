@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import UserMenu from "@/components/common/layout/UserMenu";
@@ -36,9 +36,19 @@ function SessionContent() {
     reload,
     applySessionMap,
     removeChats,
+    patchChatBookmark,
   } = useSessionChats(sessionId, isDemo);
 
   const panel = useDetailPanel();
+
+  const [pageSize, setPageSize] = useState(25);
+  const [bookmarkOnly, setBookmarkOnly] = useState(false);
+
+  const visibleChats = useMemo(
+    () =>
+      bookmarkOnly ? chats.filter((c) => Boolean(c.bookmark?.enabled)) : chats,
+    [chats, bookmarkOnly]
+  );
 
   const groupName = sessionMap.find((e) => e.session_id === sessionId)?.group?.name;
   const sName = sessionMap.find((e) => e.session_id === sessionId)?.name || sessionId;
@@ -128,12 +138,16 @@ function SessionContent() {
         {/* Conversations table (session column removed) */}
         <div className="mt-6">
           <ChatTable
-            chats={chats}
+            chats={visibleChats}
             loading={loading}
             error={error}
             hideSession
             title="Conversations"
             isDemo={isDemo}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+            bookmarkOnly={bookmarkOnly}
+            onBookmarkOnlyChange={setBookmarkOnly}
             onRefresh={reload}
             refreshing={refreshing}
             selectedId={panel.open ? panel.selected?.row.id ?? null : null}
@@ -161,6 +175,7 @@ function SessionContent() {
         open={panel.open}
         onClose={panel.close}
         onReopen={panel.reopen}
+        onBookmarkSaved={patchChatBookmark}
       />
     </main>
   );
