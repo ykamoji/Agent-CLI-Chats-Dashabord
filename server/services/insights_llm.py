@@ -6,7 +6,7 @@ import json
 from pydantic import BaseModel
 
 import config
-from db import logs_collection
+from db import logs_collection, users_collection
 from services.insights_metrics import ERROR_RE, _norm, _tools_of, _ts
 from utils import id_variants
 
@@ -62,8 +62,21 @@ def _build_digest(user_id: str, session_ids: list[str] | str | None, max_turns: 
     docs.sort(key=_ts, reverse=True)
     docs = docs[: max_turns]
 
+    # Map session_id -> user-defined name (from users.session_map), so the digest
+    # labels each conversation with its readable name when one exists.
+    name_by_session = {}
+    user = users_collection().find_one(
+        {"$or": [{"user_id": {"$in": id_variants(user_id)}}, {"_id": {"$in": id_variants(user_id)}}]}
+    )
+    if user:
+        for entry in user.get("session_map") or []:
+            if isinstance(entry, dict) and entry.get("session_id") and entry.get("name"):
+                name_by_session[entry["session_id"]] = entry["name"]
+
     digest = []
     for d in docs:
+        sid = d.get("session_id")
+        session_label = name_by_session.get(sid) or (sid or "unknown")[:10]
         tools = []
         error_snippet = ""
         for t in _tools_of(d):
@@ -77,7 +90,7 @@ def _build_digest(user_id: str, session_ids: list[str] | str | None, max_turns: 
                     error_snippet = res.strip()[:120]
         digest.append(
             {
-                "session": (d.get("session_id") or "unknown")[:8],
+                "session": session_label,
                 "prompt": (d.get("Input") or "")[: input_trunc],
                 "tools": tools,
                 "output_empty": not _norm(d.get("Output")),
@@ -149,7 +162,7 @@ def generate(user_id: str, scope: str, session_ids: list[str] | str | None, metr
             "response_mime_type": "application/json",
             "response_schema": InsightsOutput,
             "thinking_config": {
-                "thinking_level": "medium" 
+                "thinking_level": "high" 
             }
         },
     )
