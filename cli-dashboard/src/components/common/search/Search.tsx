@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSearchIndex } from "@/lib/useSearchIndex";
 import { type SearchEntry, type SearchField } from "@/lib/api";
+import { fmtTime } from "@/lib/chats";
 
 const FIELD_OPTIONS: { value: SearchField; label: string }[] = [
   { value: "input", label: "Input" },
@@ -14,7 +15,7 @@ const FIELD_OPTIONS: { value: SearchField; label: string }[] = [
 
 const MAX_RESULTS = 10;
 const MIN_CHARS = 2;
-const SNIPPET_PAD = 150;
+const SNIPPET_PAD = 105;
 
 type Match = {
   entry: SearchEntry;
@@ -256,11 +257,19 @@ export default function Search({
               >
                 <div className="flex items-center gap-2">
                   <span className="truncate text-sm font-medium">
-                    {m.entry.session_name || m.entry.session_id || "—"}
+                    #{m.entry.entry_index} {m.entry.session_name || m.entry.session_id || "—"}
                   </span>
-                  <span className="ml-auto flex-shrink-0 rounded-full bg-paper-soft px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-ink-muted">
-                    {m.field}
-                  </span>
+                  <div className="ml-auto flex-shrink-0 flex flex-col gap-1">
+                    <span className="rounded-full bg-paper-soft px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-ink-muted">
+                      {m.field}
+                    </span>
+                    <span className="truncate text-[10px] ml-2 text-ink-muted">
+                      {fmtTime(m.entry.timestamp)}
+                    </span>
+                    <span className="truncate text-[10px] ml-2 text-ink-muted">
+                      {m.entry.cli_agent}
+                    </span>
+                  </div>
                 </div>
                 <p className="line-clamp-2 break-words font-mono text-xs text-ink-muted">
                   <Highlighted text={m.snippet} q={q} />
