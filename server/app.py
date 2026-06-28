@@ -7,6 +7,7 @@ from blueprints.authenticate import bp as authenticate_bp
 from blueprints.chats import bp as chats_bp
 from blueprints.insights import bp as insights_bp
 from blueprints.profile import bp as profile_bp
+from blueprints.search import bp as search_bp
 from blueprints.session import bp as session_bp
 from cache import init_cache
 from db import init_indexes, ping
@@ -24,6 +25,7 @@ def create_app() -> Flask:
     app.register_blueprint(chats_bp)
     app.register_blueprint(insights_bp)
     app.register_blueprint(profile_bp)
+    app.register_blueprint(search_bp)
 
     @app.get("/api/health")
     def health():
