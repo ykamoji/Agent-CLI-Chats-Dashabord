@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import UserMenu from "@/components/common/layout/UserMenu";
+import Header from "@/components/common/layout/Header";
 import SessionCard from "@/components/common/cards/SessionCard";
 import SessionCardSkeleton from "@/components/common/cards/SessionCardSkeleton";
 import WeekSection from "@/components/common/layout/WeekSection";
@@ -66,6 +67,7 @@ function GroupContent() {
   const [groups, setGroups] = useState<{ name: string; session_list: string[] }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [selectionEnabled, setSelectionEnabled] = useState(false);
   const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(new Set());
@@ -80,15 +82,17 @@ function GroupContent() {
   }, [sessions, groups]);
 
   const loadChats = useCallback(
-    async () => {
+    async (mode: "initial" | "refresh" = "initial") => {
       if (!isDemo && !isAuthenticated()) {
         router.replace("/auth");
         return;
       }
+      if (mode === "refresh") setRefreshing(true);
       try {
+        const force = mode === "refresh";
         const data = isDemo
-          ? await getDemoChatsSummary(false)
-          : await getChatsSummary({ forceRefresh: false });
+          ? await getDemoChatsSummary(force)
+          : await getChatsSummary({ forceRefresh: force });
         setSessions(data.sessions);
         setSessionMap(data.sessionMap);
         setGroups(data.groups ?? []);
@@ -99,7 +103,8 @@ function GroupContent() {
         }
         setError(err instanceof ApiError ? err.message : "Failed to load group chats.");
       } finally {
-        setLoading(false);
+        if (mode === "initial") setLoading(false);
+        else setRefreshing(false);
       }
     },
     [isDemo, router]
@@ -176,33 +181,14 @@ function GroupContent() {
 
   return (
     <main className="min-h-screen bg-paper text-ink">
-      {/* Top bar */}
-      <header className="sticky top-0 z-20 border-b border-ink/10 bg-paper/80 backdrop-blur">
-        <div className="mx-auto flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            <Link href="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
-              <span className="grid h-8 w-8 place-items-center rounded-md bg-ink font-mono text-sm font-bold text-paper">
-                &gt;_
-              </span>
-            </Link>
-            <div className="flex items-center gap-2 font-display text-lg font-bold tracking-tight">
-              <Link href={dashboardHref} className="text-ink-muted transition-colors hover:text-ink">
-                Dashboard
-              </Link>
-              <span className="text-ink-muted">/</span>
-              <span>{groupName}</span>
-            </div>
-          </div>
-          {isDemo ? (
-            <span className="inline-flex items-center gap-2 rounded-full border border-ink/10 bg-paper-soft px-4 py-1.5 text-xs font-medium text-ink-muted">
-              <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-              Viewing: {demoUser}
-            </span>
-          ) : (
-            <UserMenu />
-          )}
-        </div>
-      </header>
+      <Header
+        isDemo={isDemo}
+        demoUser={demoUser}
+        breadcrumbs={[
+          { label: "Dashboard", href: dashboardHref },
+          { label: groupName },
+        ]}
+      />
 
       <div className="mx-auto px-6 py-10">
         <div className="flex items-center gap-3 mb-6">
@@ -225,6 +211,8 @@ function GroupContent() {
           selectedCount={selectedSessionIds.size}
           onAddSessionsClick={() => setAddModalOpen(true)}
           isAdmin={isAdmin}
+          onRefresh={() => loadChats("refresh")}
+          refreshing={refreshing}
         />
 
         <div className="mt-6">
@@ -241,9 +229,9 @@ function GroupContent() {
         </div>
 
         <div className="mt-8">
-          {loading ? (
+          {loading || refreshing ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 3 }).map((_, i) => (
+              {Array.from({ length: Math.max(groupSessions.length, 3) }).map((_, i) => (
                 <SessionCardSkeleton key={i} />
               ))}
             </div>

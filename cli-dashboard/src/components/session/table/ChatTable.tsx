@@ -24,8 +24,6 @@ export default function ChatTable({
   onRowClick,
   onDelete,
   isDemo = false,
-  pageSize = 25,
-  onPageSizeChange,
   bookmarkOnly = false,
   onBookmarkOnlyChange,
 }: {
@@ -41,9 +39,6 @@ export default function ChatTable({
   onRowClick?: (row: Row, rowNumber: number) => void;
   onDelete?: (selectedRawChats: Chat[]) => Promise<void>;
   isDemo?: boolean;
-  pageSize?: number;
-  // When provided, a page-size selector is shown in the header.
-  onPageSizeChange?: (size: number) => void;
   bookmarkOnly?: boolean;
   // When provided, a "Bookmarked only" toggle is shown in the header.
   onBookmarkOnlyChange?: (only: boolean) => void;
@@ -55,6 +50,7 @@ export default function ChatTable({
   const [selectionEnabled, setSelectionEnabled] = useState(false);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [pageSize, setPageSize] = useState(25);
 
   // Export panel visibility (the panel owns its own config + download logic).
   const [exportOpen, setExportOpen] = useState(false);
@@ -149,46 +145,21 @@ export default function ChatTable({
 
   return (
     <>
+      <h2 className="font-display text-lg font-bold pb-2">{title}</h2>
       <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-material">
         <div className="flex items-center justify-between border-b border-ink/10 px-5 py-4">
-          <h2 className="font-display text-lg font-bold">{title}</h2>
-          <div className="flex items-center gap-3">
-            {onBookmarkOnlyChange && (
-              <label
-                className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-medium shadow-material transition-colors ${
-                  bookmarkOnly
-                    ? "border-ink bg-ink text-paper"
-                    : "border-ink/15 bg-white text-ink hover:bg-paper-soft"
-                } ${loading || deleting ? "cursor-not-allowed opacity-60" : ""}`}
-              >
-                <input
-                  type="checkbox"
-                  checked={bookmarkOnly}
-                  disabled={loading || deleting}
-                  onChange={(e) => onBookmarkOnlyChange(e.target.checked)}
-                  className="sr-only"
-                />
-                <svg
-                  className="h-3.5 w-3.5"
-                  viewBox="0 0 24 24"
-                  fill={bookmarkOnly ? "currentColor" : "none"}
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                </svg>
-                Bookmarked
-              </label>
-            )}
-            {onPageSizeChange && (
-              <PageSizeSelect
-                value={pageSize}
-                onChange={onPageSizeChange}
-                disabled={loading || deleting}
-              />
-            )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectionEnabled(!selectionEnabled);
+                setSelectedRowIds(new Set());
+              }}
+              disabled={loading || deleting}
+              className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {selectionEnabled ? "Cancel Selection" : "Select"}
+            </button>
             {selectionEnabled && selectedRowIds.size > 0 && onDelete && (
               <button
                 type="button"
@@ -214,17 +185,43 @@ export default function ChatTable({
                 {deleting ? "Deleting…" : "Delete"}
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => {
-                setSelectionEnabled(!selectionEnabled);
-                setSelectedRowIds(new Set());
-              }}
-              disabled={loading || deleting}
-              className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {selectionEnabled ? "Cancel Selection" : "Select"}
-            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            {onBookmarkOnlyChange && (
+              <label
+                className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-medium shadow-material transition-colors ${bookmarkOnly
+                  ? "border-ink bg-ink text-paper"
+                  : "border-ink/15 bg-white text-ink hover:bg-paper-soft"
+                  } ${loading || deleting ? "cursor-not-allowed opacity-60" : ""}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={bookmarkOnly}
+                  disabled={loading || deleting}
+                  onChange={(e) => onBookmarkOnlyChange(e.target.checked)}
+                  className="sr-only"
+                />
+                <svg
+                  className="h-3.5 w-3.5"
+                  viewBox="0 0 24 24"
+                  fill={bookmarkOnly ? "currentColor" : "none"}
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+                Bookmarked
+              </label>
+            )}
+            {pageSize < chats.length && (
+              <PageSizeSelect
+                value={pageSize}
+                onChange={setPageSize}
+                disabled={loading || deleting}
+              />
+            )}
             <button
               type="button"
               onClick={() => setExportOpen(true)}
