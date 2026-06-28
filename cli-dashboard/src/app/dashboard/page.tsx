@@ -183,7 +183,7 @@ function DashboardContent() {
         breadcrumbs={[{ label: "Dashboard" }]}
       />
 
-      <div className="mx-auto px-6 py-10">
+      <div className="mx-auto px-6 py-2">
         {isDemo && (
           <div className="mb-6 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             <span className="font-semibold">Sample dashboard</span>
@@ -200,10 +200,10 @@ function DashboardContent() {
           </div>
         )}
         <h1 className="font-display text-3xl tracking-tight">
-          {isDemo ? `${demoUser}'s conversation history` : "Conversation history"}
+          {isDemo ? `${demoUser}'s conversations` : "Conversations"}
         </h1>
         <p className="mt-1 text-sm text-ink-muted">
-          Grouped by session. Select a session to see its Conversations.
+          View your sessions, conversations and learn insights for improving your prompting.
         </p>
 
         {/* Latest Insights */}

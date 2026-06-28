@@ -71,7 +71,7 @@ function SessionContent() {
       />
 
       <div
-        className={`px-6 py-10 transition-[margin] duration-300 ease-out ${panel.open ? "lg:mr-[50vw]" : ""
+        className={`px-6 py-3 transition-[margin] duration-300 ease-out ${panel.open ? "lg:mr-[50vw]" : ""
           }`}
       >
         {/* Back + insights */}
