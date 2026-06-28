@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import UserMenu from "@/components/common/layout/UserMenu";
+import Header from "@/components/common/layout/Header";
 import ChatTable from "@/components/session/table/ChatTable";
 import TurnDetailPanel from "@/components/session/detail/TurnDetailPanel";
 import SessionHeader from "@/components/session/header/SessionHeader";
@@ -36,9 +36,18 @@ function SessionContent() {
     reload,
     applySessionMap,
     removeChats,
+    patchChatBookmark,
   } = useSessionChats(sessionId, isDemo);
 
   const panel = useDetailPanel();
+
+  const [bookmarkOnly, setBookmarkOnly] = useState(false);
+
+  const visibleChats = useMemo(
+    () =>
+      bookmarkOnly ? chats.filter((c) => Boolean(c.bookmark?.enabled)) : chats,
+    [chats, bookmarkOnly]
+  );
 
   const groupName = sessionMap.find((e) => e.session_id === sessionId)?.group?.name;
   const sName = sessionMap.find((e) => e.session_id === sessionId)?.name || sessionId;
@@ -49,49 +58,17 @@ function SessionContent() {
     }`
     : undefined;
 
-  const backHref = groupName
-    ? groupHref!
-    : dashboardHref;
-
   return (
     <main className="min-h-screen overflow-x-hidden bg-paper text-ink">
-      {/* Top bar */}
-      <header className="sticky top-0 z-20 border-b border-ink/10 bg-paper/80 backdrop-blur">
-        <div className="mx-auto flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            <Link href="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
-              <span className="grid h-8 w-8 place-items-center rounded-md bg-ink font-mono text-sm font-bold text-paper">
-                &gt;_
-              </span>
-            </Link>
-            <div className="flex items-center gap-2 font-display text-lg font-bold tracking-tight">
-              <Link href={dashboardHref} className="text-ink-muted transition-colors hover:text-ink">
-                Dashboard
-              </Link>
-              <span className="text-ink-muted">/</span>
-              {groupName && (
-                <>
-                  <Link href={groupHref!} className="text-ink-muted transition-colors hover:text-ink">
-                    {groupName}
-                  </Link>
-                  <span className="text-ink-muted">/</span>
-                </>
-              )}
-              <span className="truncate max-w-[200px] sm:max-w-[300px]" title={sName}>
-                {sName}
-              </span>
-            </div>
-          </div>
-          {isDemo ? (
-            <span className="inline-flex items-center gap-2 rounded-full border border-ink/10 bg-paper-soft px-4 py-1.5 text-xs font-medium text-ink-muted">
-              <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-              Viewing: {demoUser}
-            </span>
-          ) : (
-            <UserMenu />
-          )}
-        </div>
-      </header>
+      <Header
+        isDemo={isDemo}
+        demoUser={demoUser}
+        breadcrumbs={[
+          { label: "Dashboard", href: dashboardHref },
+          ...(groupName ? [{ label: groupName, href: groupHref }] : []),
+          { label: sName, truncate: true },
+        ]}
+      />
 
       <div
         className={`px-6 py-10 transition-[margin] duration-300 ease-out ${panel.open ? "lg:mr-[50vw]" : ""
@@ -128,12 +105,14 @@ function SessionContent() {
         {/* Conversations table (session column removed) */}
         <div className="mt-6">
           <ChatTable
-            chats={chats}
+            chats={visibleChats}
             loading={loading}
             error={error}
             hideSession
             title="Conversations"
             isDemo={isDemo}
+            bookmarkOnly={bookmarkOnly}
+            onBookmarkOnlyChange={setBookmarkOnly}
             onRefresh={reload}
             refreshing={refreshing}
             selectedId={panel.open ? panel.selected?.row.id ?? null : null}
@@ -161,6 +140,7 @@ function SessionContent() {
         open={panel.open}
         onClose={panel.close}
         onReopen={panel.reopen}
+        onBookmarkSaved={patchChatBookmark}
       />
     </main>
   );

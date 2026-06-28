@@ -1,5 +1,7 @@
 // Shared helpers for turning raw chat-log documents into normalized rows.
-import { type Chat } from "@/lib/api";
+import { type Bookmark, type Chat } from "@/lib/api";
+
+export type { Bookmark };
 
 export type ToolUse = {
   tool?: string;
@@ -17,6 +19,7 @@ export type Row = {
   entryIndex: number;
   sessionId: string;
   agent: string;
+  bookmark: Bookmark;
   raw: Chat;
 };
 
@@ -29,6 +32,7 @@ export function toRow(chat: Chat, i: number): Row {
   const toolsRaw = chat["Tools Used"];
   const toolCountRaw = chat["tool_count"];
   const toolsArray = Array.isArray(toolsRaw) ? (toolsRaw as ToolUse[]) : [];
+  const bookmarkRaw = (chat.bookmark ?? {}) as Partial<Bookmark>;
   return {
     id: (typeof chat._id === "string" && chat._id) || String(i),
     timestamp:
@@ -40,6 +44,10 @@ export function toRow(chat: Chat, i: number): Row {
     entryIndex: typeof chat.entry_index === "number" ? chat.entry_index : 0,
     sessionId: str(chat, "session_id"),
     agent: str(chat, "cli_agent"),
+    bookmark: {
+      enabled: bookmarkRaw.enabled ? 1 : 0,
+      message: typeof bookmarkRaw.message === "string" ? bookmarkRaw.message : "",
+    },
     raw: chat,
   };
 }

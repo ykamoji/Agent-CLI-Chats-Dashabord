@@ -34,9 +34,8 @@ CACHE_TYPE = os.getenv("CACHE_TYPE", "SimpleCache")
 CACHE_REDIS_URL = os.getenv("CACHE_REDIS_URL", "")
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-me")
-PORT = int(os.getenv("PORT", "5000"))
+PORT = int(os.getenv("PORT", "5050"))
 
 CORS_ORIGINS = [
-    o.strip().strip("'").strip('"').rstrip("/") 
-    for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()
+    o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()
 ]

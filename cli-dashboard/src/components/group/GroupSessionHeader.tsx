@@ -13,6 +13,8 @@ export default function GroupSessionHeader({
   selectedCount,
   onAddSessionsClick,
   isAdmin,
+  onRefresh,
+  refreshing
 }: {
   groupName: string;
   sessionsCount: number;
@@ -24,6 +26,8 @@ export default function GroupSessionHeader({
   selectedCount: number;
   onAddSessionsClick: () => void;
   isAdmin: boolean;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
@@ -117,8 +121,8 @@ export default function GroupSessionHeader({
           {sessionsCount} session{sessionsCount !== 1 ? "s" : ""}
         </p>
 
-        {isAdmin && (
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          {isAdmin && (<>
             {selectionEnabled ? (
               <>
                 <span className="text-xs text-ink-muted mr-2">{selectedCount} selected</span>
@@ -165,8 +169,32 @@ export default function GroupSessionHeader({
                 </button>
               </>
             )}
-          </div>
-        )}
+          </>)}
+          {onRefresh && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onRefresh}
+                disabled={refreshing}
+                className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <svg
+                  className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                  <path d="M21 3v6h-6" />
+                </svg>
+                {refreshing ? "Syncing…" : "Sync"}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

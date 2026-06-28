@@ -2,16 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Light-only design system: text/surface colors are fixed (see the `ink` and
+   `paper` palettes in tailwind.config.ts). We deliberately do NOT flip these
+   under prefers-color-scheme: dark — doing so turned inherited body text white
+   over the light panels (e.g. the Input/Output blocks in TurnDetail), making
+   that content invisible for OS dark-mode users. */
 :root {
   --background: #fafafa;
   --foreground: #0a0a0a;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #fafafa;
-  }
 }
 
 html {

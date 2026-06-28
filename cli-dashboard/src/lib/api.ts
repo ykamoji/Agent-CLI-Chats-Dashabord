@@ -14,6 +14,12 @@ export type User = {
   role?: string;
 };
 
+// A per-conversation bookmark. `enabled` is stored as an int (1/0) server-side.
+export type Bookmark = {
+  enabled: number;
+  message: string;
+};
+
 // A chat log row. The server stores flexible documents, so fields are optional.
 export type Chat = {
   _id?: string;
@@ -23,6 +29,7 @@ export type Chat = {
   output?: string;
   status?: string;
   timestamp?: string;
+  bookmark?: Bookmark;
   [key: string]: unknown;
 };
 
@@ -405,16 +412,49 @@ export async function getDemoChatsSummary(forceRefresh = false): Promise<ChatsSu
 
 /** DELETE /api/chats — bulk delete chat records. */
 export async function deleteChats(records: Record<string, unknown>[], demo = false): Promise<void> {
-  if (demo) throw new Error("Cannot delete in demo mode");
+  const qs = demo ? "?demo=true" : "";
   await request(
-    "/api/chats",
+    `/api/chats${qs}`,
     {
       method: "DELETE",
       body: JSON.stringify({ records }),
     },
+    true // always send auth token so backend can verify if admin
+  );
+  clearChatsCache();
+}
+
+/**
+ * POST /api/chat — set the bookmark on a single conversation.
+ *
+ * The conversation is identified by the (session_id, entry_index, cli_agent,
+ * user_id) tuple. Always authenticated. In demo mode the server only permits
+ * the write for admins (and scopes it to the demo viewer's logs).
+ */
+export async function updateChatBookmark(
+  raw: Chat,
+  enabled: boolean,
+  message: string,
+  demo = false
+): Promise<Bookmark> {
+  const bookmark: Bookmark = { enabled: enabled ? 1 : 0, message };
+  const qs = demo ? "?demo=true" : "";
+  await request(
+    `/api/chat${qs}`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        session_id: raw.session_id,
+        entry_index: raw.entry_index,
+        cli_agent: raw.cli_agent,
+        user_id: raw.user_id,
+        bookmark,
+      }),
+    },
     true
   );
   clearChatsCache();
+  return bookmark;
 }
 
 /**

@@ -53,7 +53,7 @@ export default function ToolCard({ tool, index }: { tool: ToolUse; index: number
                 <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-ink-muted">
                   Arguments
                 </div>
-                <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded bg-white p-2 font-mono text-xs">
+                <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded bg-white p-2 font-mono text-xs text-ink">
                   {fmtArgs(tool.arguments)}
                 </pre>
               </div>

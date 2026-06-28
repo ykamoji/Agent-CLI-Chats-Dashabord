@@ -20,16 +20,17 @@ from utils import id_variants, json_safe
 bp = Blueprint("chats", __name__)
 
 
-def _query_chats(user_id: str, limit: int, session_id: str = None) -> dict:
+def _query_chats(user_id: str, session_id: str = None) -> dict:
+    """Return all chat logs for the user (optionally one session). Pagination is
+    handled client-side, so no server-side limit is applied here."""
     query = {"user_id": {"$in": id_variants(user_id)}}
     if session_id:
         query["session_id"] = session_id
-        
+
     pipeline = [
         {"$match": query},
         {"$addFields": {"tool_count": {"$size": {"$ifNull": ["$Tools Used", []]}}}},
         {"$project": {"Tools Used": 0}},
-        {"$limit": limit}
     ]
     cursor = logs_collection().aggregate(pipeline)
     chats = [json_safe(doc) for doc in cursor]
@@ -48,12 +49,6 @@ def _session_map(user_id: str) -> list:
 
 @bp.get("/api/chats")
 def get_chats():
-    # Optional pagination.
-    try:
-        limit = min(int(request.args.get("limit", 100)), 500)
-    except ValueError:
-        limit = 100
-
     force_refresh = request.args.get("refresh") in ("1", "true", "True")
 
     session_id_param = request.args.get("session_id")
@@ -66,7 +61,7 @@ def get_chats():
         user_id = str(viewer.get("user_id") or viewer.get("_id"))
         if not user_id:
             return jsonify({"chats": [], "count": 0})
-        result = _query_chats(user_id, limit, session_id_param)
+        result = _query_chats(user_id, session_id_param)
         result["session_map"] = _session_map(user_id)
         return jsonify(result)
 
@@ -81,14 +76,14 @@ def get_chats():
     if not user_id:
         return jsonify({"chats": [], "count": 0})
 
-    # Cache key also incorporates the limit and session_id so different page sizes/sessions don't collide.
-    cache_key = f"chats:{user_id}:{limit}:{session_id_param}"
+    # Cache key incorporates session_id so different sessions don't collide.
+    cache_key = f"chats:{user_id}:{session_id_param}"
 
     result = None
     if not force_refresh:
         result = cache.get(cache_key)
     if result is None:
-        result = _query_chats(user_id, limit, session_id_param)
+        result = _query_chats(user_id, session_id_param)
         cache.set(cache_key, result, timeout=config.CHATS_CACHE_TTL)
 
     # session_map is read fresh (not cached) so renamed sessions show up
@@ -209,10 +204,18 @@ def get_chats_tool():
     tools = doc.get("Tools Used") or []
     return jsonify({"tools": json_safe(tools)})
 
-@bp.delete("/api/chats")
-def delete_chats():
-    if request.args.get("demo"):
-        return jsonify({"error": "Cannot delete in demo mode"}), 403
+@bp.post("/api/chat")
+def update_chat():
+    """Update a single conversation's bookmark.
+
+    Identifies the log by the (session_id, entry_index, cli_agent, user_id)
+    tuple — the same key the delete path uses.
+
+    Writes are blocked in demo mode, except for logged-in admins: an admin may
+    edit bookmarks on demo (viewer-owned) sessions. Such writes are scoped
+    strictly to the demo viewer's logs.
+    """
+    is_demo = bool(request.args.get("demo"))
 
     token = extract_token()
     session = get_active_session(token)
@@ -220,13 +223,83 @@ def delete_chats():
         return jsonify({"error": "invalid_or_expired_session"}), 401
 
     payload = request.get_json()
-    if not payload or not isinstance(payload.get("records"), list):
+    if not payload:
         return jsonify({"error": "invalid_payload"}), 400
 
     user_id = session.get("user_id")
+
+    if is_demo:
+        # Only admins may edit bookmarks on demo sessions.
+        user_doc = users_collection().find_one(
+            {"$or": [{"user_id": {"$in": id_variants(user_id)}}, {"_id": {"$in": id_variants(user_id)}}]}
+        )
+        if not user_doc or user_doc.get("role") != "admin":
+            return jsonify({"error": "Cannot update in demo mode"}), 403
+        # Scope the write strictly to the demo viewer's own logs.
+        viewer = users_collection().find_one({"role": "viewer"})
+        if not viewer:
+            return jsonify({"error": "not_found"}), 404
+        owner_id = str(viewer.get("user_id") or viewer.get("_id"))
+        valid_users = set(id_variants(owner_id))
+    else:
+        valid_users = set(id_variants(user_id))
+
+    record_user_id = payload.get("user_id")
+    if record_user_id not in valid_users:
+        return jsonify({"error": "forbidden"}), 403
+
+    bookmark_in = payload.get("bookmark") or {}
+    bookmark = {
+        "enabled": 1 if bookmark_in.get("enabled") else 0,
+        "message": str(bookmark_in.get("message") or ""),
+    }
+
+    query = {
+        "entry_index": payload.get("entry_index"),
+        "session_id": payload.get("session_id"),
+        "cli_agent": payload.get("cli_agent"),
+        "user_id": record_user_id,
+    }
+    res = logs_collection().update_one(query, {"$set": {"bookmark": bookmark}})
+    if res.matched_count == 0:
+        return jsonify({"error": "not_found"}), 404
+
+    # Invalidate the cached chats so the next GET reflects it. The demo path is
+    # never server-cached, so only the authenticated owner's keys need clearing.
+    if not is_demo:
+        cache.delete(f"chats:{user_id}:{payload.get('session_id')}")
+        cache.delete(f"chats:{user_id}:None")
+
+    return jsonify({"success": True, "bookmark": bookmark})
+
+
+@bp.delete("/api/chats")
+def delete_chats():
+    token = extract_token()
+    session = get_active_session(token)
+    if not session:
+        return jsonify({"error": "invalid_or_expired_session"}), 401
+
+    user_id = session.get("user_id")
+    user = users_collection().find_one({"user_id": user_id})
+    is_admin = user and user.get("role") == "admin"
+    is_demo = request.args.get("demo") == "true"
+
+    if is_demo and not is_admin:
+        return jsonify({"error": "Cannot delete in demo mode unless admin"}), 403
+
+    payload = request.get_json()
+    if not payload or not isinstance(payload.get("records"), list):
+        return jsonify({"error": "invalid_payload"}), 400
+
     records = payload["records"]
     deleted_count = 0
-    valid_users = set(id_variants(user_id))
+
+    if is_demo:
+        viewer = users_collection().find_one({"role": "viewer"})
+        valid_users = set(id_variants(viewer.get("user_id") if viewer else ""))
+    else:
+        valid_users = set(id_variants(user_id))
 
     for record in records:
         entry_index = record.get("entry_index")
