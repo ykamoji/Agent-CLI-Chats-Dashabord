@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import UserMenu from "@/components/common/layout/UserMenu";
+import Header from "@/components/common/layout/Header";
 import SessionCard from "@/components/common/cards/SessionCard";
 import SessionCardSkeleton from "@/components/common/cards/SessionCardSkeleton";
 import SessionGroupModal from "@/components/dashboard/SessionGroupModal";
@@ -176,27 +177,11 @@ function DashboardContent() {
 
   return (
     <main className="min-h-screen bg-paper text-ink">
-      {/* Top bar */}
-      <header className="sticky top-0 z-20 border-b border-ink/10 bg-paper/80 backdrop-blur">
-        <div className="mx-auto flex items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-md bg-ink font-mono text-sm font-bold text-paper">
-              &gt;_
-            </span>
-            <span className="font-display text-lg font-bold tracking-tight">
-              CLI Dashboard
-            </span>
-          </Link>
-          {isDemo ? (
-            <span className="inline-flex items-center gap-2 rounded-full border border-ink/10 bg-paper-soft px-4 py-1.5 text-xs font-medium text-ink-muted">
-              <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-              Viewing: {demoUser}
-            </span>
-          ) : (
-            <UserMenu />
-          )}
-        </div>
-      </header>
+      <Header
+        isDemo={isDemo}
+        demoUser={demoUser}
+        breadcrumbs={[{ label: "Dashboard" }]}
+      />
 
       <div className="mx-auto px-6 py-10">
         {isDemo && (
@@ -310,19 +295,32 @@ function DashboardContent() {
                   defaultOpen={g.defaultOpen}
                 >
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {g.sessions.map((s) => (
-                      <SessionCard
-                        key={s.groupName ? `group-${s.groupName}` : s.sessionId}
-                        sessionId={s.sessionId}
-                        latestTimestamp={s.latestTs}
-                        href={s.groupName ? groupHref(s.groupName) : sessionHref(s.sessionId)}
-                        name={s.groupName || sessionName(sessionMap, s.sessionId)}
-                        label={sessionLabel(sessionMap, s.sessionId)}
-                        agent={s.agent}
-                        groupSessions={s.groupSessions}
-                        count={s.count}
-                      />
-                    ))}
+                    {g.sessions.map((s) => {
+                      let computedLabel = sessionLabel(sessionMap, s.sessionId);
+                      if (s.groupSessions && s.groupSessions.length > 0) {
+                        const allLabels = s.groupSessions.map((gs) => sessionLabel(sessionMap, gs.sessionId));
+                        if (allLabels.some((l) => l === "Blue")) {
+                          computedLabel = "Blue";
+                        } else if (allLabels.every((l) => l === "Green")) {
+                          computedLabel = "Green";
+                        } else {
+                          computedLabel = "None";
+                        }
+                      }
+                      return (
+                        <SessionCard
+                          key={s.groupName ? `group-${s.groupName}` : s.sessionId}
+                          sessionId={s.sessionId}
+                          latestTimestamp={s.latestTs}
+                          href={s.groupName ? groupHref(s.groupName) : sessionHref(s.sessionId)}
+                          name={s.groupName || sessionName(sessionMap, s.sessionId)}
+                          label={computedLabel}
+                          agent={s.agent}
+                          groupSessions={s.groupSessions}
+                          count={s.count}
+                        />
+                      );
+                    })}
                   </div>
                 </WeekSection>
               ))}

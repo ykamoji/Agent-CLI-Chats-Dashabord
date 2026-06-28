@@ -81,11 +81,16 @@ export default function SessionCard({
             {name}
           </p>
           <ul className="mt-2 space-y-0.5">
-            {groupSessions.map((s) => (
+            {groupSessions.slice(0, 5).map((s) => (
               <li key={s.sessionId} className="truncate font-mono text-xs text-ink-muted" title={s.sessionId}>
                 {s.name || s.sessionId}
               </li>
             ))}
+            {groupSessions.length > 5 && (
+              <li className="truncate font-mono text-[10px] text-gray-500">
+                + {groupSessions.length - 5} more
+              </li>
+            )}
           </ul>
         </>
       ) : tagged ? (
