@@ -20,12 +20,6 @@ function csvEscape(v: string | number): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-/** Escape a value for use inside a Markdown table cell. */
-function mdCell(v: unknown): string {
-  const s = v == null ? "" : String(v);
-  return s.replace(/\r?\n/g, " ").replace(/\|/g, "\\|");
-}
-
 /** Render a scalar value for a Markdown key–value line. */
 function mdValue(v: unknown): string {
   if (v == null) return "—";

@@ -33,35 +33,11 @@ export default function TurnDetailPanel({
 
   return (
     <>
-      {/* Bookmark tab: reopen the panel after it was closed. */}
-      {!open && row && (
-        <button
-          type="button"
-          onClick={onReopen}
-          aria-label="Open details panel"
-          className="group fixed right-0 top-1/2 z-40 flex -translate-y-1/2 flex-col items-center gap-2 rounded-l-xl border border-r-0 border-ink/15 bg-ink px-2 py-5 text-paper shadow-material transition-all hover:px-3"
-        >
-          <svg
-            className="h-4 w-4 transition-transform group-hover:-translate-x-0.5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fillRule="evenodd"
-              d="M12.79 5.23a.75.75 0 010 1.06L9.08 10l3.71 3.71a.75.75 0 11-1.06 1.06l-4.24-4.24a.75.75 0 010-1.06l4.24-4.24a.75.75 0 011.06 0z"
-              clipRule="evenodd"
-            />
-          </svg>
-          <span className="text-[10px] font-medium uppercase tracking-wide [writing-mode:vertical-rl]">
-            Details
-          </span>
-        </button>
-      )}
-
       {/* Slide-over panel */}
       <aside
         aria-hidden={!open}
-        className={`fixed right-0 top-0 z-40 flex h-screen w-full flex-col border-l border-ink/15 bg-paper shadow-material transition-transform duration-300 ease-out lg:w-1/2 ${open ? "translate-x-0" : "translate-x-full"
+        className={`fixed right-0 top-0 z-40 flex h-screen w-full flex-col border-l border-ink/15 bg-paper shadow-material 
+          transition-transform duration-300 ease-out lg:w-1/2 ${open ? "translate-x-0" : "translate-x-full"
           }`}
       >
         {/* Header */}
@@ -82,8 +58,8 @@ export default function TurnDetailPanel({
               {agentLabel && (
                 <span
                   className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${isClaude
-                      ? "bg-ink text-paper"
-                      : "border border-ink/20 bg-white text-ink"
+                    ? "bg-ink text-paper"
+                    : "border border-ink/20 bg-white text-ink"
                     }`}
                 >
                   <span
@@ -114,6 +90,29 @@ export default function TurnDetailPanel({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5">
+          {/* Bookmark tab: reopen the panel after it was closed. */}
+          <button
+            type="button"
+            onClick={open ? onClose : onReopen}
+            aria-label="Open details panel"
+            className="group fixed left-[-35px] top-1/2 z-40 flex translate-y-[-350px] flex-col items-center gap-2 rounded-l-xl 
+            border border-r-0 border-ink/15 bg-ink px-2 py-5 text-paper shadow-material transition-all hover:-translate-x-3 hover:pr-5"
+          >
+            <svg
+              className={`h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5 ${open ? 'group-hover:rotate-180' : 'group-hover:-rotate-180'}`}
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M12.79 5.23a.75.75 0 010 1.06L9.08 10l3.71 3.71a.75.75 0 11-1.06 1.06l-4.24-4.24a.75.75 0 010-1.06l4.24-4.24a.75.75 0 011.06 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <span className="text-[10px] font-medium uppercase tracking-wide [writing-mode:vertical-rl]">
+              Details
+            </span>
+          </button>
           {row ? (
             <TurnDetail row={row} onBookmarkSaved={onBookmarkSaved} />
           ) : (

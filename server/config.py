@@ -28,6 +28,9 @@ SESSION_TTL_MINUTES = int(os.getenv("SESSION_TTL_MINUTES", "15"))
 
 # Server-side cache for /api/chats (authenticated users), in seconds.
 CHATS_CACHE_TTL = int(os.getenv("CHATS_CACHE_TTL", "900"))
+# Max characters of Input/Output kept in the /api/search index, to bound the
+# payload and the client's sessionStorage cache.
+SEARCH_FIELD_TRUNC = int(os.getenv("SEARCH_FIELD_TRUNC", "4000"))
 # Flask-Caching backend. "SimpleCache" (in-process) by default; set to
 # "RedisCache" + CACHE_REDIS_URL for a shared cache across workers.
 CACHE_TYPE = os.getenv("CACHE_TYPE", "SimpleCache")

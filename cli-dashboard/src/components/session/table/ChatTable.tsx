@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { type Chat } from "@/lib/api";
 import { fmtTime, toRow, type Row } from "@/lib/chats";
 import AgentBadge from "@/components/common/ui/AgentBadge";
@@ -26,6 +26,8 @@ export default function ChatTable({
   isDemo = false,
   bookmarkOnly = false,
   onBookmarkOnlyChange,
+  focusEntryIndex,
+  onFocusRow,
 }: {
   chats: Chat[];
   loading: boolean;
@@ -42,6 +44,10 @@ export default function ChatTable({
   bookmarkOnly?: boolean;
   // When provided, a "Bookmarked only" toggle is shown in the header.
   onBookmarkOnlyChange?: (only: boolean) => void;
+  // Deep-link target: page to + scroll to + flash the row with this entry_index.
+  focusEntryIndex?: number;
+  // Fired once when the focus row is located (e.g. to open its detail panel).
+  onFocusRow?: (row: Row, rowNumber: number) => void;
 }) {
   const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
     key: "timestamp",
@@ -114,6 +120,35 @@ export default function ChatTable({
     () => sorted.slice((safePage - 1) * pageSize, safePage * pageSize),
     [sorted, safePage, pageSize]
   );
+
+  // Deep-link focus: when an entry_index is targeted, page to the row, then
+  // scroll it into view and flash a highlight. Runs once per focus value.
+  const [flashId, setFlashId] = useState<string | null>(null);
+  const focusDoneRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (focusEntryIndex == null || Number.isNaN(focusEntryIndex)) {
+      // Focus cleared (the page strips ?focus after handling it). Reset the
+      // guard so navigating to the *same* row again re-fires.
+      focusDoneRef.current = null;
+      return;
+    }
+    if (focusDoneRef.current === focusEntryIndex) return;
+    const idx = sorted.findIndex((r) => r.entryIndex === focusEntryIndex);
+    if (idx === -1) return; // rows not loaded yet — retry on next render
+    focusDoneRef.current = focusEntryIndex;
+    const target = sorted[idx];
+    setPage(Math.floor(idx / pageSize) + 1);
+    setFlashId(target.id);
+    onFocusRow?.(target, rowNumber.get(target.id) ?? 0);
+  }, [focusEntryIndex, sorted, pageSize, rowNumber, onFocusRow]);
+
+  useEffect(() => {
+    if (!flashId) return;
+    const el = document.querySelector(`[data-row-id="${flashId}"]`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    const t = setTimeout(() => setFlashId(null), 2200);
+    return () => clearTimeout(t);
+  }, [flashId, safePage, paged]);
 
   // Rows the export panel should act on: the selection, or all when none.
   const exportingSelected = selectionEnabled && selectedRowIds.size > 0;
@@ -260,7 +295,7 @@ export default function ChatTable({
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table id="conversation_logs" className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-ink/10 text-xs uppercase tracking-wide text-ink-muted">
                 {selectionEnabled && (
@@ -316,17 +351,21 @@ export default function ChatTable({
                 paged.map((r) => {
                   const selected = selectedId === r.id;
                   const isChecked = selectedRowIds.has(r.id);
+                  const flashing = flashId === r.id;
                   return (
                     <tr
                       key={r.id}
+                      data-row-id={r.id}
                       onClick={() => onRowClick?.(r, rowNumber.get(r.id) ?? 0)}
                       aria-selected={selected}
                       className={`border-b border-ink/5 align-top transition-colors ${onRowClick ? "cursor-pointer" : ""
-                        } ${selected
-                          ? "bg-ink/5 ring-1 ring-inset ring-ink/20"
-                          : isChecked
-                            ? "bg-ink/5"
-                            : "hover:bg-paper-soft"
+                        } ${flashing
+                          ? "bg-amber-50 ring-2 ring-inset ring-amber-400"
+                          : selected
+                            ? "bg-ink/5 ring-1 ring-inset ring-ink/20"
+                            : isChecked
+                              ? "bg-ink/5"
+                              : "hover:bg-paper-soft"
                         }`}
                     >
                       {selectionEnabled && (
