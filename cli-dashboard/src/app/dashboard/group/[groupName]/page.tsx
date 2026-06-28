@@ -9,6 +9,7 @@ import SessionCard from "@/components/common/cards/SessionCard";
 import SessionCardSkeleton from "@/components/common/cards/SessionCardSkeleton";
 import WeekSection from "@/components/common/layout/WeekSection";
 import Insights from "@/components/common/insights/Insights";
+import Search from "@/components/common/search/Search";
 import {
   ApiError,
   getChatsSummary,
@@ -72,6 +73,7 @@ function GroupContent() {
   const [selectionEnabled, setSelectionEnabled] = useState(false);
   const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(new Set());
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [searchReloadToken, setSearchReloadToken] = useState(0);
 
   const ungroupedSessions = useMemo(() => {
     const groupedIds = new Set<string>();
@@ -211,7 +213,10 @@ function GroupContent() {
           selectedCount={selectedSessionIds.size}
           onAddSessionsClick={() => setAddModalOpen(true)}
           isAdmin={isAdmin}
-          onRefresh={() => loadChats("refresh")}
+          onRefresh={() => {
+            loadChats("refresh");
+            setSearchReloadToken((t) => t + 1);
+          }}
           refreshing={refreshing}
         />
         <div className="mt-6">
@@ -226,6 +231,13 @@ function GroupContent() {
             />
           )}
         </div>
+
+        {/* Global conversation search */}
+        {!loading && (
+          <div className="mt-8">
+            <Search isDemo={isDemo} demoUser={demoUser} reloadToken={searchReloadToken} />
+          </div>
+        )}
         <h2 className="font-display text-lg font-bold mt-3">Sessions</h2>
         <div className="mt-3">
           {loading || refreshing ? (

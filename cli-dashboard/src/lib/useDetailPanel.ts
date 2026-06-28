@@ -21,6 +21,13 @@ export function useDetailPanel() {
     );
   }, []);
 
+  // Always open the given row (no toggle) — used for deep-link focus so a repeat
+  // navigation to the same row reliably opens the panel.
+  const openRow = useCallback(
+    (row: Row, num: number) => setState({ row, num, open: true }),
+    []
+  );
+
   const close = useCallback(
     () => setState((prev) => (prev ? { ...prev, open: false } : null)),
     []
@@ -34,6 +41,7 @@ export function useDetailPanel() {
     selected: state,
     open: state?.open ?? false,
     handleRowClick,
+    openRow,
     close,
     reopen,
   };

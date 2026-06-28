@@ -10,6 +10,7 @@ import SessionCardSkeleton from "@/components/common/cards/SessionCardSkeleton";
 import SessionGroupModal from "@/components/dashboard/SessionGroupModal";
 import WeekSection from "@/components/common/layout/WeekSection";
 import Insights from "@/components/common/insights/Insights";
+import Search from "@/components/common/search/Search";
 import {
   ApiError,
   getChatsSummary,
@@ -64,6 +65,7 @@ function DashboardContent() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [groupModalOpen, setGroupModalOpen] = useState(false);
+  const [searchReloadToken, setSearchReloadToken] = useState(0);
 
   const loadChats = useCallback(
     async (mode: "initial" | "refresh") => {
@@ -218,6 +220,13 @@ function DashboardContent() {
           </div>
         )}
 
+        {/* Global conversation search */}
+        {!busy && (
+          <div className="mt-8">
+            <Search isDemo={isDemo} demoUser={demoUser} reloadToken={searchReloadToken} />
+          </div>
+        )}
+
         {/* Sessions */}
         <div className="mt-8">
           <div className="mb-4 flex items-center justify-between">
@@ -246,7 +255,10 @@ function DashboardContent() {
 
               <button
                 type="button"
-                onClick={() => loadChats("refresh")}
+                onClick={() => {
+                  loadChats("refresh");
+                  setSearchReloadToken((t) => t + 1);
+                }}
                 disabled={busy}
                 className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft disabled:cursor-not-allowed disabled:opacity-60"
               >

@@ -1,13 +1,15 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/common/layout/Header";
 import ChatTable from "@/components/session/table/ChatTable";
 import TurnDetailPanel from "@/components/session/detail/TurnDetailPanel";
 import SessionHeader from "@/components/session/header/SessionHeader";
 import Insights from "@/components/common/insights/Insights";
+import Search from "@/components/common/search/Search";
+import { type Row } from "@/lib/chats";
 import { deleteChats, getStoredUser } from "@/lib/api";
 import { useSessionChats } from "@/lib/useSessionChats";
 import { useDetailPanel } from "@/lib/useDetailPanel";
@@ -39,9 +41,32 @@ function SessionContent() {
     patchChatBookmark,
   } = useSessionChats(sessionId, isDemo);
 
+  const router = useRouter();
   const panel = useDetailPanel();
 
   const [bookmarkOnly, setBookmarkOnly] = useState(false);
+  const [searchReloadToken, setSearchReloadToken] = useState(0);
+
+  const focusParam = searchParams.get("focus");
+  const focusEntryIndex = focusParam != null ? Number(focusParam) : undefined;
+
+  const handleSync = useCallback(() => {
+    reload();
+    setSearchReloadToken((t) => t + 1);
+  }, [reload]);
+
+  // When a search deep-link lands here, open the row's detail panel and strip
+  // the ?focus param so later paging doesn't keep jumping back.
+  const handleFocusRow = useCallback(
+    (row: Row, num: number) => {
+      panel.openRow(row, num);
+      const next = new URLSearchParams(searchParams.toString());
+      next.delete("focus");
+      const qs = next.toString();
+      router.replace(`/dashboard/session/${encodeURIComponent(sessionId)}${qs ? `?${qs}` : ""}`);
+    },
+    [panel, router, searchParams, sessionId]
+  );
 
   const visibleChats = useMemo(
     () =>
@@ -102,6 +127,13 @@ function SessionContent() {
           </div>
         )}
 
+        {/* Global conversation search */}
+        {!loading && !error && (
+          <div className="mt-8">
+            <Search isDemo={isDemo} demoUser={demoUser} reloadToken={searchReloadToken} />
+          </div>
+        )}
+
         {/* Conversations table (session column removed) */}
         <div className="mt-6">
           <ChatTable
@@ -113,8 +145,10 @@ function SessionContent() {
             isDemo={isDemo}
             bookmarkOnly={bookmarkOnly}
             onBookmarkOnlyChange={setBookmarkOnly}
-            onRefresh={reload}
+            onRefresh={handleSync}
             refreshing={refreshing}
+            focusEntryIndex={focusEntryIndex}
+            onFocusRow={handleFocusRow}
             selectedId={panel.open ? panel.selected?.row.id ?? null : null}
             onRowClick={panel.handleRowClick}
             onDelete={isAdmin ? async (selectedRawChats) => {

@@ -34,7 +34,7 @@ export default function TurnDetailPanel({
   return (
     <>
       {/* Bookmark tab: reopen the panel after it was closed. */}
-      {!open && row && (
+      {(
         <button
           type="button"
           onClick={onReopen}
@@ -82,8 +82,8 @@ export default function TurnDetailPanel({
               {agentLabel && (
                 <span
                   className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${isClaude
-                      ? "bg-ink text-paper"
-                      : "border border-ink/20 bg-white text-ink"
+                    ? "bg-ink text-paper"
+                    : "border border-ink/20 bg-white text-ink"
                     }`}
                 >
                   <span
