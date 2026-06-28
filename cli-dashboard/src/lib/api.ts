@@ -89,6 +89,7 @@ const USER_KEY = "cli-dashboard:user";
 const CHATS_CACHE_PREFIX = "cli-dashboard:chats:";
 const SUMMARY_CACHE_PREFIX = "cli-dashboard:summary:";
 const STATS_CACHE_PREFIX = "cli-dashboard:stats:";
+const SEARCH_INDEX_CACHE_PREFIX = "cli-dashboard:searchindex:";
 const CHATS_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 type CachedChats = { data: Chat[]; sessionMap: SessionMap; cachedAt: number };
@@ -128,7 +129,7 @@ export function clearChatsCache(): void {
   if (typeof window === "undefined") return;
   for (let i = sessionStorage.length - 1; i >= 0; i--) {
     const key = sessionStorage.key(i);
-    if (key && (key.startsWith(CHATS_CACHE_PREFIX) || key.startsWith(SUMMARY_CACHE_PREFIX) || key.startsWith(STATS_CACHE_PREFIX))) {
+    if (key && (key.startsWith(CHATS_CACHE_PREFIX) || key.startsWith(SUMMARY_CACHE_PREFIX) || key.startsWith(STATS_CACHE_PREFIX) || key.startsWith(SEARCH_INDEX_CACHE_PREFIX))) {
       sessionStorage.removeItem(key);
     }
   }
@@ -339,6 +340,90 @@ export async function getChats(options?: {
 /** Fetch chats for the sample/demo dashboard — no login required. */
 export async function getDemoChats(forceRefresh = false, sessionId?: string): Promise<ChatsResult> {
   return getChats({ demo: true, forceRefresh, sessionId });
+}
+
+// --- search index ------------------------------------------------------------
+// The whole searchable corpus for the user, fetched once and cached in
+// sessionStorage so search runs entirely client-side. Refreshed only on Sync.
+
+export type SearchField = "all" | "input" | "output" | "tool";
+
+export type SearchEntry = {
+  session_id: string;
+  session_name: string;
+  entry_index: number;
+  cli_agent: string;
+  timestamp: string;
+  input: string;
+  output: string;
+  tools: string[];
+};
+
+function readSearchIndexCache(scope: string): SearchEntry[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(SEARCH_INDEX_CACHE_PREFIX + scope);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { entries: SearchEntry[]; cachedAt: number };
+    if (Date.now() - parsed.cachedAt > CHATS_CACHE_TTL_MS) {
+      sessionStorage.removeItem(SEARCH_INDEX_CACHE_PREFIX + scope);
+      return null;
+    }
+    return parsed.entries ?? [];
+  } catch {
+    return null;
+  }
+}
+
+function writeSearchIndexCache(scope: string, entries: SearchEntry[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(
+      SEARCH_INDEX_CACHE_PREFIX + scope,
+      JSON.stringify({ entries, cachedAt: Date.now() })
+    );
+  } catch {
+    /* quota / serialization failure — caching is best-effort */
+  }
+}
+
+/**
+ * GET /api/search — the user's full searchable index. Served from the
+ * sessionStorage cache when fresh; `forceRefresh` (the page's Sync) bypasses
+ * both the client and server caches and rehydrates.
+ */
+export async function getSearchIndex(options?: {
+  demo?: boolean;
+  forceRefresh?: boolean;
+}): Promise<SearchEntry[]> {
+  const isDemo = options?.demo ?? false;
+  const forceRefresh = options?.forceRefresh ?? false;
+  const scope = isDemo ? "demo" : getStoredUser()?.user_id ?? "me";
+
+  if (!forceRefresh) {
+    const cached = readSearchIndexCache(scope);
+    if (cached) return cached;
+  }
+
+  const params = new URLSearchParams();
+  if (isDemo) {
+    params.set("demo", "true");
+  } else {
+    const userId = getStoredUser()?.user_id;
+    if (userId) params.set("user_id", userId);
+  }
+  if (forceRefresh) params.set("refresh", "true");
+
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  const data = await request<{ entries: SearchEntry[]; count: number }>(
+    `/api/search${qs}`,
+    { method: "GET" },
+    !isDemo
+  );
+
+  const entries = data.entries ?? [];
+  writeSearchIndexCache(scope, entries);
+  return entries;
 }
 
 function readSummaryCache(scope: string): ChatsSummaryResult | null {

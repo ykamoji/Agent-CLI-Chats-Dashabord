@@ -10,6 +10,7 @@ import SessionCardSkeleton from "@/components/common/cards/SessionCardSkeleton";
 import SessionGroupModal from "@/components/dashboard/SessionGroupModal";
 import WeekSection from "@/components/common/layout/WeekSection";
 import Insights from "@/components/common/insights/Insights";
+import Search from "@/components/common/search/Search";
 import {
   ApiError,
   getChatsSummary,
@@ -64,6 +65,7 @@ function DashboardContent() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [groupModalOpen, setGroupModalOpen] = useState(false);
+  const [searchReloadToken, setSearchReloadToken] = useState(0);
 
   const loadChats = useCallback(
     async (mode: "initial" | "refresh") => {
@@ -183,7 +185,7 @@ function DashboardContent() {
         breadcrumbs={[{ label: "Dashboard" }]}
       />
 
-      <div className="mx-auto px-6 py-10">
+      <div className="mx-auto px-6 py-2">
         {isDemo && (
           <div className="mb-6 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             <span className="font-semibold">Sample dashboard</span>
@@ -200,10 +202,10 @@ function DashboardContent() {
           </div>
         )}
         <h1 className="font-display text-3xl tracking-tight">
-          {isDemo ? `${demoUser}'s conversation history` : "Conversation history"}
+          {isDemo ? `${demoUser}'s conversations` : "Conversations"}
         </h1>
         <p className="mt-1 text-sm text-ink-muted">
-          Grouped by session. Select a session to see its Conversations.
+          View your sessions, conversations and learn insights for improving your prompting.
         </p>
 
         {/* Latest Insights */}
@@ -215,6 +217,13 @@ function DashboardContent() {
               mode="latest"
               chatCount={sessions.reduce((acc, s) => acc + s.count, 0)}
             />
+          </div>
+        )}
+
+        {/* Global conversation search */}
+        {!busy && (
+          <div className="mt-8">
+            <Search isDemo={isDemo} demoUser={demoUser} reloadToken={searchReloadToken} />
           </div>
         )}
 
@@ -246,7 +255,10 @@ function DashboardContent() {
 
               <button
                 type="button"
-                onClick={() => loadChats("refresh")}
+                onClick={() => {
+                  loadChats("refresh");
+                  setSearchReloadToken((t) => t + 1);
+                }}
                 disabled={busy}
                 className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-1.5 text-xs font-medium text-ink shadow-material transition-colors hover:bg-paper-soft disabled:cursor-not-allowed disabled:opacity-60"
               >

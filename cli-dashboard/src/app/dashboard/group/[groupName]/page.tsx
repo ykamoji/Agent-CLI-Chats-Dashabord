@@ -9,6 +9,7 @@ import SessionCard from "@/components/common/cards/SessionCard";
 import SessionCardSkeleton from "@/components/common/cards/SessionCardSkeleton";
 import WeekSection from "@/components/common/layout/WeekSection";
 import Insights from "@/components/common/insights/Insights";
+import Search from "@/components/common/search/Search";
 import {
   ApiError,
   getChatsSummary,
@@ -72,6 +73,7 @@ function GroupContent() {
   const [selectionEnabled, setSelectionEnabled] = useState(false);
   const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(new Set());
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [searchReloadToken, setSearchReloadToken] = useState(0);
 
   const ungroupedSessions = useMemo(() => {
     const groupedIds = new Set<string>();
@@ -190,7 +192,7 @@ function GroupContent() {
         ]}
       />
 
-      <div className="mx-auto px-6 py-10">
+      <div className="mx-auto px-6 py-3">
         <div className="flex items-center gap-3 mb-6">
           <Link
             href={dashboardHref}
@@ -211,10 +213,12 @@ function GroupContent() {
           selectedCount={selectedSessionIds.size}
           onAddSessionsClick={() => setAddModalOpen(true)}
           isAdmin={isAdmin}
-          onRefresh={() => loadChats("refresh")}
+          onRefresh={() => {
+            loadChats("refresh");
+            setSearchReloadToken((t) => t + 1);
+          }}
           refreshing={refreshing}
         />
-
         <div className="mt-6">
           {!loading && groupSessions.length > 0 && (
             <Insights
@@ -228,7 +232,14 @@ function GroupContent() {
           )}
         </div>
 
-        <div className="mt-8">
+        {/* Global conversation search */}
+        {!loading && (
+          <div className="mt-8">
+            <Search isDemo={isDemo} demoUser={demoUser} reloadToken={searchReloadToken} />
+          </div>
+        )}
+        <h2 className="font-display text-lg font-bold mt-3">Sessions</h2>
+        <div className="mt-3">
           {loading || refreshing ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: Math.max(groupSessions.length, 3) }).map((_, i) => (
